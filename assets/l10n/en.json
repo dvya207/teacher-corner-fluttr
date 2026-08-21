@@ -1,0 +1,31 @@
+{
+  "app": { "title": "Teacher Corner" },
+  "common": {
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "loading": "Loading…",
+    "empty": "Nothing here yet"
+  },
+  "nav": {
+    "dashboard": "Home",
+    "classrooms": "Classrooms",
+    "profile": "Profile"
+  },
+  "auth": {
+    "phone_label": "Mobile number",
+    "send_otp": "Send OTP",
+    "verify": "Verify"
+  },
+  "classrooms": {
+    "title": "My Classrooms",
+    "search_hint": "Search classrooms…",
+    "students_count": "{} students"
+  },
+  "lu": {
+    "steps": "Steps",
+    "evidence": "Evidence",
+    "add_photo": "Add photo",
+    "max_photos": "You can add up to {} photos."
+  }
+}

@@ -1,0 +1,65 @@
+name: tc_starter
+description: "Teacher Corner — intern rebuild starter (vertical slice)"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── Firebase (helix-staging-india) ──────────────────────────────────────
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.2
+  cloud_firestore: ^5.6.7
+  firebase_storage: ^12.4.5
+
+  # ── State ───────────────────────────────────────────────────────────────
+  provider: ^6.1.5
+
+  # ── Navigation ──────────────────────────────────────────────────────────
+  go_router: ^14.8.1
+
+  # ── Responsiveness. PINNED to an exact version on purpose. Do not float:
+  #    minor releases of this package have changed scaling behaviour before.
+  flutter_screenutil: 5.9.3
+
+  # ── UI ──────────────────────────────────────────────────────────────────
+  flutter_svg: ^2.0.10
+  cached_network_image: ^3.4.1
+
+  # ── Localization ────────────────────────────────────────────────────────
+  easy_localization: ^3.0.7
+
+  # ── Utilities ───────────────────────────────────────────────────────────
+  intl: ^0.20.2
+  image_picker: ^1.1.2
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mockito: ^5.4.0
+  build_runner: ^2.4.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/l10n/
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+    - family: Noto Sans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSans-Bold.ttf
+          weight: 700

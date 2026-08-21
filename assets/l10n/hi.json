@@ -1,0 +1,31 @@
+{
+  "app": { "title": "टीचर कॉर्नर" },
+  "common": {
+    "retry": "पुनः प्रयास करें",
+    "cancel": "रद्द करें",
+    "submit": "जमा करें",
+    "loading": "लोड हो रहा है…",
+    "empty": "यहाँ कुछ नहीं है"
+  },
+  "nav": {
+    "dashboard": "होम",
+    "classrooms": "कक्षाएँ",
+    "profile": "प्रोफ़ाइल"
+  },
+  "auth": {
+    "phone_label": "मोबाइल नंबर",
+    "send_otp": "OTP भेजें",
+    "verify": "सत्यापित करें"
+  },
+  "classrooms": {
+    "title": "मेरी कक्षाएँ",
+    "search_hint": "कक्षाएँ खोजें…",
+    "students_count": "{} विद्यार्थी"
+  },
+  "lu": {
+    "steps": "चरण",
+    "evidence": "साक्ष्य",
+    "add_photo": "फ़ोटो जोड़ें",
+    "max_photos": "आप अधिकतम {} फ़ोटो जोड़ सकते हैं।"
+  }
+}

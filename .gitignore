@@ -1,0 +1,18 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+*.iml
+.idea/
+.vscode/
+pubspec.lock
+
+# Firebase — NEVER commit these. Both are per-developer config.
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Android signing — NEVER commit.
+android/key.properties
+*.jks
+*.keystore
