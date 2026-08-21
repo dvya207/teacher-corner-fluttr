@@ -88,10 +88,15 @@ Future<void> pumpScreen(
     tester.view.resetDevicePixelRatio();
   });
 
+  // MultiProvider asserts on an empty provider list, and a screen like the
+  // splash legitimately needs none.
+  Widget withProviders(Widget child) => providers.isEmpty
+      ? child
+      : MultiProvider(providers: providers, child: child);
+
   await tester.pumpWidget(
-    MultiProvider(
-      providers: providers,
-      child: ScreenUtilInit(
+    withProviders(
+      ScreenUtilInit(
         designSize: const Size(360, 800),
         minTextAdapt: true,
         fontSizeResolver: FontSizeResolvers.width,
@@ -119,4 +124,43 @@ Future<void> pumpScreen(
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 10));
   }
+}
+
+/// Loads the bundled brand fonts into the test engine.
+///
+/// Without this every glyph renders as an Ahem box, which makes a golden image
+/// worthless. Read straight off disk rather than through `rootBundle`, so it
+/// does not depend on how the `fonts:` section of pubspec.yaml ends up in the
+/// asset manifest.
+///
+/// Fonts are global to the engine, so call this from `setUpAll`.
+Future<void> loadAppFonts() async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  const families = <String, List<String>>{
+    'Montserrat': [
+      'assets/fonts/Montserrat-SemiBold.ttf',
+      'assets/fonts/Montserrat-Bold.ttf',
+    ],
+    'Noto Sans': [
+      'assets/fonts/NotoSans-Regular.ttf',
+      'assets/fonts/NotoSans-Bold.ttf',
+    ],
+  };
+
+  for (final family in families.entries) {
+    final loader = FontLoader(family.key);
+    for (final path in family.value) {
+      final bytes = File(path).readAsBytesSync();
+      loader.addFont(Future.value(ByteData.view(bytes.buffer)));
+    }
+    await loader.load();
+  }
+
+  // Material icons are not loaded in a test by default, so every Icon renders
+  // as an empty square. This one does come from the test asset bundle rather
+  // than from disk, because it ships inside the Flutter SDK.
+  final icons = FontLoader('MaterialIcons')
+    ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+  await icons.load();
 }

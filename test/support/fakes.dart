@@ -79,12 +79,27 @@ class FakeFirestoreService extends FirestoreService {
   }
 }
 
-/// Reports a uid without a Firebase session behind it. Screens only ever read
-/// the uid off AuthProvider, so this is enough to pump them.
+/// Reports a session without a Firebase one behind it.
+///
+/// Every field the screens read is overridable, so a test can pose the login
+/// form mid-flow (awaiting a code, showing an error, busy) without driving it
+/// through a real verification it cannot perform.
 class StubAuthProvider extends AuthProvider {
-  StubAuthProvider({this.stubUid = 'uid_1'});
+  StubAuthProvider({
+    this.stubUid = 'uid_1',
+    this.stubTeacher,
+    LoginStage stubStage = LoginStage.phoneEntry,
+    this.stubBusy = false,
+    this.stubErrorKey,
+    this.stubPendingPhone = '',
+  }) : _stubStage = stubStage;
 
   final String? stubUid;
+  final Teacher? stubTeacher;
+  final LoginStage _stubStage;
+  final bool stubBusy;
+  final String? stubErrorKey;
+  final String stubPendingPhone;
 
   @override
   String? get uid => stubUid;
@@ -94,4 +109,19 @@ class StubAuthProvider extends AuthProvider {
 
   @override
   bool get authLoaded => true;
+
+  @override
+  Teacher? get teacher => stubTeacher;
+
+  @override
+  LoginStage get stage => _stubStage;
+
+  @override
+  bool get isBusy => stubBusy;
+
+  @override
+  String? get errorKey => stubErrorKey;
+
+  @override
+  String get pendingPhoneNumber => stubPendingPhone;
 }

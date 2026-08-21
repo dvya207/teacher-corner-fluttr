@@ -86,6 +86,40 @@ re-sort it in place and no screen has to remember to. Same for
 `ClassroomSearch.filter` and `LearningUnit.resources`. Cheap, and it turns a
 convention into something the analyzer and the tests enforce.
 
+## What the golden images showed that the tests did not
+
+`test/golden/goldens/` renders every screen and state to a PNG. Three things
+were only visible once I looked at them:
+
+**The `+91` prefix was swallowing the phone field.** A `Center` inside
+`InputDecoration.prefixIcon` expands to the field's whole width, so the input
+area collapsed and the hint never rendered. Every test still passed, because
+the field accepted text and validated correctly. It just looked broken.
+
+**In landscape, type is oversized rather than overflowing.** The tokens resolve
+`.sp` and `.w` against a 360-wide baseline, so at 800x360 everything horizontal
+scales 2.2x while `.r` (min axis) shrinks to 0.45x. Nothing overflows any more,
+but "No classrooms yet" renders enormous and the app bar logo shrinks to about
+10px. That is a design-token decision rather than a bug in a screen, so I have
+not unilaterally capped the width scale; it needs a call on whether the tokens
+should clamp.
+
+**The dashboard has a visible hole.** It renders a "Classrooms" section heading
+with nothing beneath it, because Phase 2's dashboard is only name, institution
+and counts. It reads as unfinished rather than as scoped, and either the heading
+should go or the classroom list should come up onto the dashboard.
+
+## How to look at it without a device
+
+```bash
+flutter test                     # 143 tests, no device, no Firebase, no data
+flutter analyze                  # must print "No issues found!"
+flutter test --update-goldens test/golden/screens_golden_test.dart
+```
+
+The goldens are rendered against fakes on a 360x800 surface. They show layout,
+type and colour, and they prove nothing about whether the real reads work.
+
 ## Still unverified
 
 Everything below needs either a working device or seeded data, and I have

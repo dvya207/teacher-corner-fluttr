@@ -153,10 +153,17 @@ class _LoginScreenState extends State<LoginScreen> {
         FilteringTextInputFormatter.digitsOnly,
         LengthLimitingTextInputFormatter(_phoneLength),
       ],
+      // No Center: inside prefixIcon it expands to the field's whole width,
+      // swallowing the input area so the hint never shows. And the default
+      // 48dp icon minimum is wrong for a short text prefix.
       prefixIcon: Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacing12),
-        child: Center(child: Text(kDialCode, style: AppTypography.inputText)),
+        padding: EdgeInsetsDirectional.only(
+          start: AppDimensions.spacing12,
+          end: AppDimensions.spacing8,
+        ),
+        child: Text(kDialCode, style: AppTypography.inputText),
       ),
+      prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
       validator: (value) => kIndianMobile.hasMatch((value ?? '').trim())
           ? null
           : 'auth.phone_invalid'.tr(),

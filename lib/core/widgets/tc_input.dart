@@ -19,6 +19,11 @@ class TcInput extends StatelessWidget {
   /// Left null, this widget behaves exactly as it did before.
   final List<TextInputFormatter>? inputFormatters;
 
+  /// Additive: lets a caller stop `prefixIcon` from being padded out to the
+  /// 48dp icon minimum, which is wrong for a short text prefix like a dial
+  /// code. Null keeps Material's default.
+  final BoxConstraints? prefixIconConstraints;
+
   const TcInput({
     super.key,
     this.label,
@@ -31,6 +36,7 @@ class TcInput extends StatelessWidget {
     this.validator,
     this.onChanged,
     this.inputFormatters,
+    this.prefixIconConstraints,
   });
 
   @override
@@ -50,7 +56,12 @@ class TcInput extends StatelessWidget {
           validator: validator,
           onChanged: onChanged,
           inputFormatters: inputFormatters,
-          decoration: InputDecoration(hintText: hint, prefixIcon: prefixIcon, suffixIcon: suffixIcon),
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: prefixIcon,
+            prefixIconConstraints: prefixIconConstraints,
+            suffixIcon: suffixIcon,
+          ),
         ),
       ],
     );
