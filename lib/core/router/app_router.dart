@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/login_screen.dart';
+import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/placeholder_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
@@ -87,8 +88,7 @@ class AppRouter {
           routes: [
             GoRoute(
               path: dashboard,
-              builder: (context, state) =>
-                  const PlaceholderScreen(title: 'Dashboard'),
+              builder: (context, state) => const DashboardScreen(),
             ),
             GoRoute(
               path: '/classrooms',

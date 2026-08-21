@@ -16,9 +16,16 @@ import '../models/teacher.dart';
 /// `FirebaseFirestore.instance` — that constant always resolves to `(default)`,
 /// which is not this app's database and fails silently rather than loudly.
 class FirestoreService {
-  FirestoreService({FirebaseFirestore? firestore}) : _db = firestore ?? db;
+  FirestoreService({FirebaseFirestore? firestore}) : _injected = firestore;
 
-  final FirebaseFirestore _db;
+  final FirebaseFirestore? _injected;
+
+  /// Resolved lazily, on first use. Eagerly defaulting to [db] in the
+  /// constructor would call `Firebase.app()` the moment anyone built a
+  /// FirestoreService, which throws in a unit test where Firebase was never
+  /// initialised. A test double that overrides every read must be able to exist
+  /// without touching Firebase at all.
+  late final FirebaseFirestore _db = _injected ?? db;
 
   /// The signed-in teacher's profile, or null when no document exists.
   ///

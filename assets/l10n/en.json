@@ -55,5 +55,14 @@
     "title": "Profile",
     "no_profile": "Your teacher profile has not been set up yet.",
     "uid_label": "Auth uid (debug)"
+  },
+  "dashboard": {
+    "greeting": "Welcome back",
+    "stat_classrooms": "Classrooms",
+    "stat_programmes": "Programmes",
+    "error_title": "Could not load your dashboard",
+    "error_generic": "Something went wrong loading your dashboard.",
+    "error_offline": "This is taking too long. Check your connection and try again.",
+    "no_profile": "You are signed in, but no teacher profile has been set up for this account yet."
   }
 }
