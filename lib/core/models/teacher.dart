@@ -1,13 +1,20 @@
 import '../utils/safe_parse.dart';
+import 'classroom_ref.dart';
 
 /// One teacher's profile document: `Teachers/{uid}`.
 ///
-/// Deliberately partial. The denormalised `classrooms` map also lives on this
-/// document, but SCHEMA.md is explicit that it is a summary; Phase 3 reads the
-/// authoritative `Classrooms/{id}` documents instead, so parsing it here would
-/// create a second source of truth for the same thing.
+/// The `classrooms` map on this document is a denormalised SUMMARY. It is what
+/// the dashboard and the classroom list read, because it answers "which
+/// classrooms are mine" in a single document read. The moment a screen needs
+/// the full picture, including which workflow a classroom runs for a learning
+/// unit, it reads the authoritative `Classrooms/{id}` document instead.
 class Teacher {
-  const Teacher({required this.uid, this.name, this.meta});
+  const Teacher({
+    required this.uid,
+    this.name,
+    this.meta,
+    this.classrooms = const [],
+  });
 
   /// The Firebase Auth uid, which is also the document id.
   final String uid;
@@ -21,6 +28,9 @@ class Teacher {
   /// "no meta at all" and "meta present but blank" are different states and
   /// only the first one should fall back to [name].
   final TeacherMeta? meta;
+
+  /// The teacher's classrooms, from the denormalised map keyed by classroom id.
+  final List<ClassroomRef> classrooms;
 
   static const String collection = 'Teachers';
 
@@ -42,6 +52,11 @@ class Teacher {
       uid: uid,
       name: SafeParse.asDisplayString(data['name']),
       meta: meta,
+      classrooms: ClassroomRef.listFrom(
+        data['classrooms'],
+        collection: collection,
+        docId: uid,
+      ),
     );
   }
 
@@ -57,6 +72,18 @@ class Teacher {
   }
 
   String? get institutionName => meta?.institutionName;
+
+  int get classroomCount => classrooms.length;
+
+  /// Distinct programmes across every classroom.
+  ///
+  /// Counted by id, not summed per classroom: one programme normally runs in
+  /// several of a teacher's classrooms, and "3 programmes" meaning the same
+  /// programme counted three times would be a lie on the dashboard.
+  int get programmeCount => {
+        for (final classroom in classrooms)
+          for (final programme in classroom.programmes) programme.programmeId,
+      }.length;
 }
 
 /// The nested `teacherMeta` map. A map, not a subcollection.

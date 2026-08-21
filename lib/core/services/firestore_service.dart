@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../firebase/firestore_ref.dart';
+import '../models/classroom.dart';
 import '../models/teacher.dart';
 
 /// Every Firestore read in the app goes through this class. No screen and no
@@ -29,5 +30,34 @@ class FirestoreService {
     final snap = await _db.collection(Teacher.collection).doc(uid).get();
     if (!snap.exists) return null;
     return Teacher.fromMap(snap.id, snap.data() ?? const <String, dynamic>{});
+  }
+
+  /// The authoritative classroom document, or null when it does not exist.
+  ///
+  /// A teacher's denormalised `classrooms` map can name a classroom whose real
+  /// document has since been deleted, so "referenced but absent" is a state the
+  /// caller has to handle rather than an impossibility.
+  Future<Classroom?> fetchClassroom(String classroomId) async {
+    final snap =
+        await _db.collection(Classroom.collection).doc(classroomId).get();
+    if (!snap.exists) return null;
+    return Classroom.fromMap(
+      snap.id,
+      snap.data() ?? const <String, dynamic>{},
+    );
+  }
+
+  /// Fetches several classrooms concurrently, dropping the ones that do not
+  /// exist.
+  ///
+  /// Deliberately N parallel document gets rather than a `whereIn` query: the
+  /// ids come from the teacher's own document, document reads hit Firestore's
+  /// cache individually and degrade one row at a time, and `whereIn` is capped
+  /// at 30 values, which a teacher with many classrooms would silently exceed.
+  Future<List<Classroom>> fetchClassrooms(Iterable<String> classroomIds) async {
+    final ids = classroomIds.toSet().toList();
+    if (ids.isEmpty) return const [];
+    final results = await Future.wait(ids.map(fetchClassroom));
+    return results.whereType<Classroom>().toList();
   }
 }

@@ -26,6 +26,38 @@ class AppRouter {
   static const String login = '/login';
   static const String dashboard = '/dashboard';
 
+  /// The whole routing policy, as a pure function of three inputs.
+  ///
+  /// Extracted from the `GoRouter` closure so it can be tested without pumping
+  /// a widget tree: this is the piece that regresses, and a test that needs a
+  /// Firebase-backed app running is a test nobody runs.
+  ///
+  /// Returns the location to redirect to, or null to stay put.
+  static String? resolveRedirect({
+    required String location,
+    required bool authLoaded,
+    required bool isAuthenticated,
+  }) {
+    // THREE states, not two: signed in, signed out, and not-yet-known.
+    // Treating the third as "signed out" is what makes every cold start flash
+    // the login screen before landing on the dashboard, so hold on the splash
+    // until Firebase has actually answered.
+    if (!authLoaded) {
+      return location == splash ? null : splash;
+    }
+
+    if (!isAuthenticated) {
+      // Everything except the login screen funnels back to it, so there is no
+      // route, deep link or back gesture that reaches a signed-in screen
+      // without a session.
+      return location == login ? null : login;
+    }
+
+    // Signed in: the splash and the login form are no longer destinations.
+    if (location == splash || location == login) return dashboard;
+    return null;
+  }
+
   static GoRouter router({
     required Listenable refreshListenable,
     required bool Function() isAuthenticated,
@@ -34,29 +66,11 @@ class AppRouter {
     return GoRouter(
       initialLocation: splash,
       refreshListenable: refreshListenable,
-      redirect: (context, state) {
-        final location = state.matchedLocation;
-
-        // Auth has not resolved yet. THREE states, not two: signed in, signed
-        // out, and not-yet-known. Treating the third as "signed out" is what
-        // makes every cold start flash the login screen before landing on the
-        // dashboard, so hold on the splash until Firebase has actually
-        // answered.
-        if (!isAuthLoaded()) {
-          return location == splash ? null : splash;
-        }
-
-        if (!isAuthenticated()) {
-          // Everything except the login screen funnels back to it, so there is
-          // no route, deep link or back gesture that reaches a signed-in screen
-          // without a session.
-          return location == login ? null : login;
-        }
-
-        // Signed in: the splash and the login form are no longer destinations.
-        if (location == splash || location == login) return dashboard;
-        return null;
-      },
+      redirect: (context, state) => resolveRedirect(
+        location: state.matchedLocation,
+        authLoaded: isAuthLoaded(),
+        isAuthenticated: isAuthenticated(),
+      ),
       routes: [
         GoRoute(
           path: splash,
