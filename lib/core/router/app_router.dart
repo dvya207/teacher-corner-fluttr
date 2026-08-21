@@ -7,7 +7,9 @@ import '../../features/classrooms/classroom_detail_provider.dart';
 import '../../features/classrooms/classroom_detail_screen.dart';
 import '../../features/classrooms/classroom_list_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
-import '../../features/placeholder_screen.dart';
+import '../../features/learning_unit/learning_unit_provider.dart';
+import '../../features/learning_unit/missing_workflow_screen.dart';
+import '../../features/learning_unit/learning_unit_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../features/splash/splash_screen.dart';
@@ -123,11 +125,30 @@ class AppRouter {
 
         // Learning unit sits OUTSIDE the shell: it is a full-screen task view,
         // so the bottom nav should not be showing while a teacher is in it.
+        //
+        // `workflowId` arrives as a query parameter rather than being looked up
+        // here, because which workflow runs for this unit is a property of the
+        // CLASSROOM that opened it. A link without it is not resolvable, and
+        // guessing one would silently walk the teacher through the wrong steps.
         GoRoute(
           path: '/lu/:id',
-          builder: (context, state) => PlaceholderScreen(
-            title: 'Learning Unit ${state.pathParameters['id']}',
-          ),
+          builder: (context, state) {
+            final learningUnitId = state.pathParameters['id']!;
+            final workflowId =
+                state.uri.queryParameters['workflowId']?.trim() ?? '';
+            if (workflowId.isEmpty) {
+              return const MissingWorkflowScreen();
+            }
+            return ChangeNotifierProvider<LearningUnitProvider>(
+              create: (ctx) => LearningUnitProvider(
+                firestore: ctx.read<FirestoreService>(),
+              ),
+              child: LearningUnitScreen(
+                learningUnitId: learningUnitId,
+                workflowId: workflowId,
+              ),
+            );
+          },
         ),
       ],
     );

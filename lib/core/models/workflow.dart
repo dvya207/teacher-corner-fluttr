@@ -32,6 +32,47 @@ class WorkflowContent {
 
   bool get hasResource => (resourcePath ?? '').trim().isNotEmpty;
 
+  static const Set<String> _imageExtensions = {
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.webp',
+    '.gif',
+  };
+
+  static const Set<String> _documentExtensions = {
+    '.pdf',
+    '.doc',
+    '.docx',
+    '.ppt',
+    '.pptx',
+  };
+
+  /// True when this content is a picture to show rather than something to read.
+  ///
+  /// Checks the declared type and category first, then falls back to the
+  /// resource extension, because the seeded documents label an image only by
+  /// its file name.
+  bool get isImage {
+    final declared = '${contentType ?? ''} ${contentCategory ?? ''}'
+        .toLowerCase();
+    if (declared.contains('image') || declared.contains('photo')) {
+      // An upload assignment mentions photos but is not a picture to display.
+      return !isUploadAssignment;
+    }
+    return _hasExtensionIn(_imageExtensions);
+  }
+
+  /// A file we cannot render inline (a PDF guide, a slide deck). Worth naming
+  /// on screen rather than pretending it is not there.
+  bool get isDocument => !isImage && _hasExtensionIn(_documentExtensions);
+
+  bool _hasExtensionIn(Set<String> extensions) {
+    final path = (resourcePath ?? '').trim().toLowerCase();
+    if (path.isEmpty) return false;
+    return extensions.any(path.endsWith);
+  }
+
   factory WorkflowContent.fromMap(
     Map<String, dynamic> data, {
     String? docId,

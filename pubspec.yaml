@@ -29,6 +29,11 @@ dependencies:
   # ── UI ──────────────────────────────────────────────────────────────────
   flutter_svg: ^2.0.10
   cached_network_image: ^3.4.1
+  # Direct, because the Storage image path is read from this cache BY KEY before
+  # any download URL is resolved. It arrives transitively with
+  # cached_network_image, but importing it without declaring it is how a
+  # transitive bump silently breaks a build.
+  flutter_cache_manager: ^3.4.1
 
   # ── Localization ────────────────────────────────────────────────────────
   easy_localization: ^3.0.7

@@ -20,6 +20,7 @@ class FakeFirestoreService extends FirestoreService {
     this.workflows = const [],
     this.throws,
     this.throwsOnClassroom,
+    this.throwsOnLearningUnit,
     this.gate,
   });
 
@@ -34,6 +35,9 @@ class FakeFirestoreService extends FirestoreService {
   /// Thrown by [fetchClassroom] when set.
   final Object? throwsOnClassroom;
 
+  /// Thrown by [fetchLearningUnit] when set.
+  final Object? throwsOnLearningUnit;
+
   /// When set, [fetchTeacher] does not complete until the test completes this.
   /// Used for the timeout path and the re-entry guard.
   final Completer<void>? gate;
@@ -41,6 +45,7 @@ class FakeFirestoreService extends FirestoreService {
   int teacherReads = 0;
   int classroomReads = 0;
   int learningUnitReads = 0;
+  int workflowReads = 0;
   final List<String> requestedUids = [];
 
   @override
@@ -74,6 +79,8 @@ class FakeFirestoreService extends FirestoreService {
   @override
   Future<LearningUnit?> fetchLearningUnit(String learningUnitId) async {
     learningUnitReads++;
+    if (gate != null) await gate!.future;
+    if (throwsOnLearningUnit != null) throw throwsOnLearningUnit!;
     for (final unit in learningUnits) {
       if (unit.learningUnitId == learningUnitId) return unit;
     }
@@ -82,6 +89,7 @@ class FakeFirestoreService extends FirestoreService {
 
   @override
   Future<Workflow?> fetchWorkflow(String workflowId) async {
+    workflowReads++;
     for (final workflow in workflows) {
       if (workflow.workflowId == workflowId) return workflow;
     }

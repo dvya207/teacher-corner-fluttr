@@ -58,7 +58,22 @@
     "steps": "Steps",
     "evidence": "Evidence",
     "add_photo": "Add photo",
-    "max_photos": "You can add up to {} photos."
+    "max_photos": "You can add up to {} photos.",
+    "about": "About this activity",
+    "step_of": "Step {} of {}",
+    "duration": "{} min",
+    "optional": "Optional",
+    "no_steps_title": "No steps yet",
+    "no_steps_subtitle": "This workflow has no steps to walk through.",
+    "no_content_title": "Nothing to show here",
+    "no_content_subtitle": "This step has no content attached to it yet.",
+    "content_unavailable": "This content has no text or image attached yet.",
+    "document": "Document",
+    "not_found_title": "Activity not found",
+    "not_found_subtitle": "This activity, or the workflow this classroom runs for it, no longer exists.",
+    "error_title": "Could not load this activity",
+    "error_generic": "Something went wrong loading this activity.",
+    "error_offline": "This is taking too long. Check your connection and try again."
   },
   "profile": {
     "title": "Profile",

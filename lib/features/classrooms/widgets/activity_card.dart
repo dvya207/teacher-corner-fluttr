@@ -2,20 +2,30 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../core/services/storage_image_source.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/tc_chip.dart';
 import '../../../core/widgets/tc_icon_tile.dart';
+import '../../../core/widgets/tc_storage_image.dart';
 import '../../../core/widgets/tc_status_message.dart';
 import '../classroom_detail_provider.dart';
 
 /// One learning unit as this classroom runs it.
 class ActivityCard extends StatelessWidget {
-  const ActivityCard({super.key, required this.activity, this.onTap});
+  const ActivityCard({
+    super.key,
+    required this.activity,
+    this.onTap,
+    this.imageSource,
+  });
 
   final Activity activity;
   final VoidCallback? onTap;
+
+  /// Injected by tests so a card can be rendered without Firebase Storage.
+  final StorageImageSource? imageSource;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +57,19 @@ class ActivityCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const TcIconTile(icon: Icons.science_outlined),
+              // learningUnitPreviewImage is a Storage PATH. TcStorageImage
+              // checks the file cache for that path before resolving any
+              // download URL, so a list of cards does not cost one round
+              // trip per row on every scroll.
+              if (unit.previewImagePath != null)
+                TcStorageImage(
+                  storagePath: unit.previewImagePath,
+                  width: 44.r,
+                  height: 44.r,
+                  source: imageSource,
+                )
+              else
+                const TcIconTile(icon: Icons.science_outlined),
               SizedBox(width: AppDimensions.spacing12),
               Expanded(
                 child: Column(

@@ -237,4 +237,57 @@ void main() {
       expect(workflow.steps.map((s) => s.workflowStepId), ['s1']);
     });
   });
+
+  group('content types', () {
+    WorkflowContent content(Map<String, dynamic> data) =>
+        WorkflowContent.fromMap(data, docId: 'wf', field: 'steps.contents');
+
+    test('an image is recognised from its declared type', () {
+      expect(
+        content({'contentType': 'image', 'resourcePath': 'a/b.bin'}).isImage,
+        isTrue,
+      );
+    });
+
+    test('an image is recognised from its file extension', () {
+      // The seeded documents label some images only by file name.
+      for (final path in [
+        'luImages/mps.png',
+        'luImages/mps.JPG',
+        'luImages/mps.jpeg',
+        'luImages/mps.webp',
+      ]) {
+        expect(content({'resourcePath': path}).isImage, isTrue, reason: path);
+      }
+    });
+
+    test('a document is not mistaken for an image', () {
+      final guide = content({
+        'contentCategory': 'guide',
+        'resourcePath': 'guides/mps.pdf',
+      });
+      expect(guide.isImage, isFalse);
+      expect(guide.isDocument, isTrue);
+    });
+
+    test('the upload assignment is not treated as a picture to display', () {
+      // Its name mentions photos, but it is a place to PUT photos.
+      final assignment = content({
+        'contentName': 'Photo evidence',
+        'contentCategory': 'assignment',
+        'assignmentType': 'UPLOAD',
+        'resourcePath': '',
+      });
+      expect(assignment.isUploadAssignment, isTrue);
+      expect(assignment.isImage, isFalse);
+    });
+
+    test('an empty resourcePath is neither image nor document', () {
+      // Present but useless, which is what every seeded content has.
+      final empty = content({'contentName': 'Guide', 'resourcePath': ''});
+      expect(empty.hasResource, isFalse);
+      expect(empty.isImage, isFalse);
+      expect(empty.isDocument, isFalse);
+    });
+  });
 }
