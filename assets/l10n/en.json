@@ -1,5 +1,7 @@
 {
-  "app": { "title": "Teacher Corner" },
+  "app": {
+    "title": "Teacher Corner"
+  },
   "common": {
     "retry": "Retry",
     "cancel": "Cancel",
@@ -12,10 +14,31 @@
     "classrooms": "Classrooms",
     "profile": "Profile"
   },
+  "splash": {
+    "message": "Getting things ready…"
+  },
   "auth": {
+    "title": "Teacher Corner",
+    "subtitle": "Sign in to reach your classrooms",
     "phone_label": "Mobile number",
+    "phone_hint": "10-digit mobile number",
+    "phone_invalid": "Enter a valid 10-digit mobile number.",
     "send_otp": "Send OTP",
-    "verify": "Verify"
+    "otp_label": "Verification code",
+    "otp_hint": "6-digit code",
+    "otp_invalid": "Enter the 6-digit code.",
+    "otp_sent": "We sent a code to {}.",
+    "verify": "Verify",
+    "change_number": "Change number",
+    "resend_otp": "Resend code",
+    "sign_out": "Sign out",
+    "error_invalid_phone": "That mobile number is not valid.",
+    "error_invalid_code": "That code is not correct. Check it and try again.",
+    "error_code_expired": "That code has expired. Request a new one.",
+    "error_too_many_requests": "Too many attempts. Wait a few minutes, then try again.",
+    "error_network": "No connection. Check your network and try again.",
+    "error_quota": "Verification is temporarily unavailable. Try again later.",
+    "error_unknown": "Sign-in failed. Try again."
   },
   "classrooms": {
     "title": "My Classrooms",
@@ -27,5 +50,10 @@
     "evidence": "Evidence",
     "add_photo": "Add photo",
     "max_photos": "You can add up to {} photos."
+  },
+  "profile": {
+    "title": "Profile",
+    "no_profile": "Your teacher profile has not been set up yet.",
+    "uid_label": "Auth uid (debug)"
   }
 }

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -17,9 +18,9 @@ class MainShell extends StatelessWidget {
   final Widget child;
 
   static const _tabs = <_Tab>[
-    _Tab('/dashboard', Icons.home_outlined, Icons.home, 'Home'),
-    _Tab('/classrooms', Icons.class_outlined, Icons.class_, 'Classrooms'),
-    _Tab('/profile', Icons.person_outline, Icons.person, 'Profile'),
+    _Tab('/dashboard', Icons.home_outlined, Icons.home, 'nav.dashboard'),
+    _Tab('/classrooms', Icons.class_outlined, Icons.class_, 'nav.classrooms'),
+    _Tab('/profile', Icons.person_outline, Icons.person, 'nav.profile'),
   ];
 
   int _indexFor(BuildContext context) {
@@ -54,7 +55,7 @@ class MainShell extends StatelessWidget {
               BottomNavigationBarItem(
                 icon: Icon(t.icon),
                 activeIcon: Icon(t.activeIcon),
-                label: t.label,
+                label: t.labelKey.tr(),
               ),
           ],
         ),
@@ -64,9 +65,9 @@ class MainShell extends StatelessWidget {
 }
 
 class _Tab {
-  const _Tab(this.path, this.icon, this.activeIcon, this.label);
+  const _Tab(this.path, this.icon, this.activeIcon, this.labelKey);
   final String path;
   final IconData icon;
   final IconData activeIcon;
-  final String label;
+  final String labelKey;
 }

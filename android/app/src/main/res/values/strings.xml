@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher label. Android resources, not assets/l10n, because the
+         launcher reads this before any Dart code has run. -->
+    <string name="app_name">Teacher Corner</string>
+</resources>

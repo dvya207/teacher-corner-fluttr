@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_typography.dart';
 
@@ -13,6 +14,11 @@ class TcInput extends StatelessWidget {
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
 
+  /// Additive: digit-only and fixed-length fields (phone, OTP) need to
+  /// constrain input at the keyboard rather than only complain afterwards.
+  /// Left null, this widget behaves exactly as it did before.
+  final List<TextInputFormatter>? inputFormatters;
+
   const TcInput({
     super.key,
     this.label,
@@ -24,6 +30,7 @@ class TcInput extends StatelessWidget {
     this.suffixIcon,
     this.validator,
     this.onChanged,
+    this.inputFormatters,
   });
 
   @override
@@ -42,6 +49,7 @@ class TcInput extends StatelessWidget {
           style: AppTypography.inputText,
           validator: validator,
           onChanged: onChanged,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(hintText: hint, prefixIcon: prefixIcon, suffixIcon: suffixIcon),
         ),
       ],
