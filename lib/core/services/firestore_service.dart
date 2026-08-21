@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../firebase/firestore_ref.dart';
 import '../models/classroom.dart';
+import '../models/learning_unit.dart';
 import '../models/teacher.dart';
+import '../models/workflow.dart';
 
 /// Every Firestore read in the app goes through this class. No screen and no
 /// provider touches `cloud_firestore` directly.
@@ -66,5 +68,31 @@ class FirestoreService {
     if (ids.isEmpty) return const [];
     final results = await Future.wait(ids.map(fetchClassroom));
     return results.whereType<Classroom>().toList();
+  }
+
+  /// A learning unit, shared across classrooms.
+  Future<LearningUnit?> fetchLearningUnit(String learningUnitId) async {
+    final snap = await _db
+        .collection(LearningUnit.collection)
+        .doc(learningUnitId)
+        .get();
+    if (!snap.exists) return null;
+    return LearningUnit.fromMap(
+      snap.id,
+      snap.data() ?? const <String, dynamic>{},
+    );
+  }
+
+  /// The workflow a specific classroom runs for a specific learning unit.
+  ///
+  /// The caller has to have resolved the workflow id from the CLASSROOM first,
+  /// via `Classroom.workflowIdFor`. There is no read that goes from a learning
+  /// unit to its workflow, because that relationship does not exist: the same
+  /// unit runs different workflows in different classrooms.
+  Future<Workflow?> fetchWorkflow(String workflowId) async {
+    final snap =
+        await _db.collection(Workflow.collection).doc(workflowId).get();
+    if (!snap.exists) return null;
+    return Workflow.fromMap(snap.id, snap.data() ?? const <String, dynamic>{});
   }
 }
