@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -20,6 +19,8 @@ class MainShell extends StatelessWidget {
   static const _tabs = <_Tab>[
     _Tab('/dashboard', Icons.home_outlined, Icons.home, 'nav.dashboard'),
     _Tab('/classrooms', Icons.class_outlined, Icons.class_, 'nav.classrooms'),
+    _Tab('/quizzes', Icons.quiz_outlined, Icons.quiz, 'nav.quizzes'),
+    _Tab('/reports', Icons.bar_chart_outlined, Icons.bar_chart, 'nav.reports'),
     _Tab('/profile', Icons.person_outline, Icons.person, 'nav.profile'),
   ];
 
@@ -45,11 +46,20 @@ class MainShell extends StatelessWidget {
             if (i != current) context.go(_tabs[i].path);
           },
           type: BottomNavigationBarType.fixed,
+          // Five tabs leave roughly 72dp each at the 360dp baseline, so a
+          // label that cannot fit ellipsizes instead of overflowing.
+          selectedLabelStyle: const TextStyle(overflow: TextOverflow.ellipsis),
+          unselectedLabelStyle:
+              const TextStyle(overflow: TextOverflow.ellipsis),
           backgroundColor: AppColors.white,
           selectedItemColor: AppColors.skyBlue,
           unselectedItemColor: AppColors.textTertiary,
-          selectedFontSize: 12.sp,
-          unselectedFontSize: 12.sp,
+          // Fixed 12, not 12.sp. `.sp` resolves against WIDTH, so in landscape
+          // the labels grow to ~27px while the bar's height shrinks, and the
+          // items overflowed. A nav label is platform chrome, like the bar's own
+          // height; the system accessibility scale still applies on top.
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
           items: [
             for (final t in _tabs)
               BottomNavigationBarItem(

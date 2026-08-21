@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../core/models/classroom_ref.dart';
 import '../../core/models/teacher.dart';
 import '../../core/services/firestore_service.dart';
+import '../classrooms/classroom_list_item.dart';
 
 /// The three states the dashboard can be in. Explicitly three, because
 /// "loaded with nothing" and "still loading" and "failed" have to look
@@ -31,6 +33,7 @@ class DashboardProvider extends ChangeNotifier {
 
   DashboardStatus _status = DashboardStatus.loading;
   Teacher? _teacher;
+  List<ClassroomListItem> _classrooms = const [];
   String? _errorKey;
   String? _uid;
   bool _inFlight = false;
@@ -38,6 +41,29 @@ class DashboardProvider extends ChangeNotifier {
 
   DashboardStatus get status => _status;
   Teacher? get teacher => _teacher;
+
+  /// The teacher's classrooms, merged with whichever authoritative documents
+  /// were readable. Built from the summary alone when that second round of
+  /// reads failed, which is why a row's student count can be null.
+  List<ClassroomListItem> get classrooms => _classrooms;
+
+  /// Total students across the teacher's classrooms, or null when the number is
+  /// not knowable.
+  ///
+  /// Null rather than a partial sum: `studentCounter` lives only on the
+  /// authoritative `Classrooms` documents, so if even one did not load, a total
+  /// would understate the real figure while looking exact. No classrooms at all
+  /// is a different case, where zero students is a fact and not a guess.
+  int? get studentTotal {
+    if (_classrooms.isEmpty) return 0;
+    var total = 0;
+    for (final classroom in _classrooms) {
+      final count = classroom.studentCounter;
+      if (count == null) return null;
+      total += count;
+    }
+    return total;
+  }
 
   /// Localisation key, not a sentence. Same reasoning as AuthProvider.
   String? get errorKey => _errorKey;
@@ -75,7 +101,9 @@ class DashboardProvider extends ChangeNotifier {
     _notify();
 
     try {
-      _teacher = await _firestore.fetchTeacher(_uid!).timeout(_timeout);
+      final teacher = await _firestore.fetchTeacher(_uid!).timeout(_timeout);
+      _teacher = teacher;
+      _classrooms = await _loadClassrooms(teacher);
       _status = DashboardStatus.loaded;
     } on TimeoutException {
       _status = DashboardStatus.error;
@@ -87,6 +115,27 @@ class DashboardProvider extends ChangeNotifier {
     } finally {
       _inFlight = false;
       _notify();
+    }
+  }
+
+  /// The second round of reads: the authoritative classroom documents, which
+  /// are the only place `studentCounter` exists.
+  ///
+  /// Deliberately allowed to fail on its own. The dashboard's job is the
+  /// teacher's name, institution and counts, and all of that is already in hand
+  /// by this point. A failure here costs the student total and the per-row
+  /// counts; it must not cost the screen.
+  Future<List<ClassroomListItem>> _loadClassrooms(Teacher? teacher) async {
+    final refs = teacher?.classrooms ?? const <ClassroomRef>[];
+    if (refs.isEmpty) return const [];
+    try {
+      final full = await _firestore
+          .fetchClassrooms(refs.map((r) => r.classroomId))
+          .timeout(_timeout);
+      return ClassroomListItem.mergeAll(refs: refs, full: full);
+    } catch (e) {
+      debugPrint('DashboardProvider: classroom details unavailable: $e');
+      return ClassroomListItem.mergeAll(refs: refs, full: const []);
     }
   }
 

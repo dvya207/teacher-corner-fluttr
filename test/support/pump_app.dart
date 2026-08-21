@@ -21,10 +21,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 import 'package:tc_starter/core/theme/app_theme.dart';
 import 'package:tc_starter/core/theme/text_scaling.dart';
+import 'package:tc_starter/features/shell/main_shell.dart';
 
 export 'package:provider/provider.dart' show ChangeNotifierProvider;
 
@@ -176,4 +178,87 @@ Future<void> loadAppFonts() async {
   final icons = FontLoader('MaterialIcons')
     ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
   await icons.load();
+}
+
+/// Pumps the bottom-nav shell around real routes.
+///
+/// MainShell derives its selected tab from the current route rather than from
+/// state, so it cannot be pumped without a router above it. This builds the
+/// smallest one that satisfies it: a ShellRoute over the five tab paths, with
+/// [routes] supplying whichever of them the test cares about and a labelled
+/// stub standing in for the rest.
+Future<void> pumpShell(
+  WidgetTester tester, {
+  String initialLocation = '/dashboard',
+  Map<String, WidgetBuilder> routes = const {},
+  List<SingleChildWidget> providers = const [],
+  bool settle = true,
+  Size surfaceSize = const Size(360, 800),
+  TextScaler textScaler = TextScaler.noScaling,
+}) async {
+  const tabPaths = <String>[
+    '/dashboard',
+    '/classrooms',
+    '/quizzes',
+    '/reports',
+    '/profile',
+  ];
+
+  final router = GoRouter(
+    initialLocation: initialLocation,
+    routes: [
+      ShellRoute(
+        builder: (context, state, child) => MainShell(child: child),
+        routes: [
+          for (final path in tabPaths)
+            GoRoute(
+              path: path,
+              builder: (context, state) {
+                final custom = routes[path];
+                if (custom != null) return custom(context);
+                return Scaffold(
+                  body: Center(child: Text('stub:$path')),
+                );
+              },
+            ),
+        ],
+      ),
+    ],
+  );
+
+  tester.view.physicalSize = surfaceSize;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
+  Widget app = ScreenUtilInit(
+    designSize: const Size(360, 800),
+    minTextAdapt: true,
+    fontSizeResolver: FontSizeResolvers.width,
+    builder: (context, _) => MaterialApp.router(
+      theme: AppTheme.light,
+      debugShowCheckedModeBanner: false,
+      routerConfig: router,
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(textScaler: clampTextScaler(textScaler)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    ),
+  );
+  if (providers.isNotEmpty) {
+    app = MultiProvider(providers: providers, child: app);
+  }
+
+  await tester.pumpWidget(app);
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
+  }
 }

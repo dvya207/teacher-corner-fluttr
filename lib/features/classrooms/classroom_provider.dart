@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../core/models/classroom.dart';
 import '../../core/models/classroom_ref.dart';
 import '../../core/services/firestore_service.dart';
 import 'classroom_list_item.dart';
@@ -105,14 +104,7 @@ class ClassroomProvider extends ChangeNotifier {
     final full = await _firestore.fetchClassrooms(
       refs.map((r) => r.classroomId),
     );
-    final byId = <String, Classroom>{
-      for (final classroom in full) classroom.classroomId: classroom,
-    };
-
-    return [
-      for (final ref in refs)
-        ClassroomListItem.merge(ref: ref, full: byId[ref.classroomId]),
-    ];
+    return ClassroomListItem.mergeAll(refs: refs, full: full);
   }
 
   void _notify() {

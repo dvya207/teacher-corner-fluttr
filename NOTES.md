@@ -104,6 +104,37 @@ but "No classrooms yet" renders enormous and the app bar logo shrinks to about
 not unilaterally capped the width scale; it needs a call on whether the tokens
 should clamp.
 
+**The dashboard is one read plus one, not one read.** I first built it as a
+single teacher read and left the student count off, on the grounds that
+`studentCounter` lives only on the authoritative `Classrooms` documents. The
+count was wanted, so the dashboard now does a second, batched round of reads for
+those documents. Two things make that safe rather than sloppy: it is ONE batched
+call and a test asserts the read counts, so an accidental read-per-row fails;
+and the second round is allowed to fail on its own, degrading to the name,
+institution, counts and rows without student numbers rather than taking the
+screen down.
+
+`studentTotal` is null rather than a partial sum when any classroom's document
+did not load. A sum of what happened to load would understate the real figure
+while looking exact. Zero classrooms is the one case where zero students is a
+fact and not a guess, so that does show.
+
+**The bottom nav is five tabs, not three.** Home, Classes, Quizzes, Reports,
+Profile. Quizzes and Reports are outside this slice and say so on their own
+screens rather than being hidden, because the nav is part of the app's shape and
+a teacher tapping Reports deserves to be told. The tab reads "Classes" and not
+"Classrooms" for a measured reason: five fixed tabs leave about 72dp each at the
+360dp baseline and the longer word does not fit. The screen itself is still
+titled "My Classrooms".
+
+That change surfaced two more instances of the token-scaling problem, both now
+fixed and both consistent with the starter's own rule that `appBarHeight` is
+unscaled platform chrome. `bottomNavHeight` was `70.h`, which collapses to about
+31 in landscape and overflowed by 57px; it is now floored at its design value.
+The nav labels were `12.sp`, which resolves against WIDTH and grew them to about
+27px in landscape while the bar shrank, for another 19px; they are now a fixed
+12, with the system accessibility scale still applying on top.
+
 **The dashboard had a visible hole, now filled.** It rendered a "Classrooms"
 section heading with nothing beneath it, because Phase 2's dashboard is only
 name, institution and counts. Rather than delete the heading I populated it: the

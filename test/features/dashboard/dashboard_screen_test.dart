@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/teacher.dart';
 import 'package:tc_starter/core/widgets/tc_hero_stat_tile.dart';
 import 'package:tc_starter/features/classrooms/widgets/classroom_card.dart';
@@ -43,6 +44,23 @@ Teacher seededTeacher() => Teacher.fromMap('uid_1', {
     },
   },
 });
+
+List<Classroom> authoritativeClassrooms() => [
+  Classroom.fromMap('cls_oak_7a', {
+    'classroomName': '7 A',
+    'grade': 7,
+    'section': 'A',
+    'institutionName': 'Test School Oak',
+    'studentCounter': 32,
+  }),
+  Classroom.fromMap('cls_oak_et', {
+    'stemClubName': 'Oak ET Club',
+    'type': 'STEM-CLUB',
+    'grade': 'ET',
+    'institutionName': 'Test School Oak',
+    'studentCounter': 12,
+  }),
+];
 
 Future<void> pumpDashboard(
   WidgetTester tester, {
@@ -209,24 +227,110 @@ void main() {
   });
 
   group('the classrooms section', () {
-    testWidgets('lists the teacher\'s classrooms, with no extra reads',
-        (tester) async {
-      // The rows come from the same teacher document the counts do, so the
-      // dashboard is still one read.
-      final fake = FakeFirestoreService(teacher: seededTeacher());
+    testWidgets('lists the classrooms, reading the teacher once and the '
+        'classroom documents once', (tester) async {
+      // The contract CHANGED here, deliberately. It used to be one read, and
+      // the dashboard showed no student count as a result. studentCounter lives
+      // only on the authoritative documents, so showing it costs a second,
+      // batched round of reads. Recorded rather than assumed, so an accidental
+      // read-per-row would fail this.
+      final fake = FakeFirestoreService(
+        teacher: seededTeacher(),
+        classrooms: authoritativeClassrooms(),
+      );
       await pumpDashboard(tester, firestore: fake);
 
       expect(find.byType(ClassroomCard), findsNWidgets(2));
       expect(find.text('7 A'), findsOneWidget);
       expect(find.text('Oak ET Club'), findsOneWidget);
       expect(fake.teacherReads, 1);
-      expect(fake.classroomReads, 0);
+      expect(fake.classroomReads, 1);
     });
 
-    testWidgets('omits the student count rather than showing zero',
+    testWidgets('totals the students across the classrooms', (tester) async {
+      await pumpDashboard(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          classrooms: authoritativeClassrooms(),
+        ),
+      );
+
+      // 32 + 12.
+      expect(find.text('Students'), findsOneWidget);
+      expect(find.text('44'), findsOneWidget);
+    });
+
+    testWidgets('shows each row its own student count', (tester) async {
+      await pumpDashboard(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          classrooms: authoritativeClassrooms(),
+        ),
+      );
+
+      expect(find.text('32 students'), findsOneWidget);
+      expect(find.text('12 students'), findsOneWidget);
+    });
+
+    testWidgets('a failed classroom read costs the total, not the screen',
         (tester) async {
-      // studentCounter lives only on the authoritative Classrooms document,
-      // which the dashboard deliberately does not read.
+      // The second round of reads is an enhancement. Losing it must not lose
+      // the teacher's name, institution or counts.
+      await pumpDashboard(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          throwsOnClassroom: StateError('permission denied'),
+        ),
+      );
+
+      expect(find.text('Divya Jain'), findsOneWidget);
+      expect(find.text('Classrooms'), findsWidgets);
+      expect(find.byType(ClassroomCard), findsNWidgets(2));
+      // No partial total: one missing document would make any sum understate
+      // the real figure while looking exact.
+      expect(find.text('Students'), findsNothing);
+      expect(find.textContaining('students'), findsNothing);
+    });
+
+    testWidgets('a classroom whose count is unknown suppresses the total',
+        (tester) async {
+      await pumpDashboard(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          // Only one of the two authoritative documents is readable.
+          classrooms: [authoritativeClassrooms().first],
+        ),
+      );
+
+      expect(find.text('Students'), findsNothing);
+      // The one that is known still shows on its own row.
+      expect(find.text('32 students'), findsOneWidget);
+    });
+
+    testWidgets('no classrooms means zero students, which is a fact',
+        (tester) async {
+      await pumpDashboard(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: Teacher.fromMap('uid_1', {
+            'teacherMeta': {'firstName': 'Divya', 'lastName': 'Jain'},
+          }),
+        ),
+      );
+
+      expect(find.text('Students'), findsOneWidget);
+      expect(find.text('0'), findsNWidgets(3));
+    });
+
+    testWidgets('omits a row\'s count when that document is missing',
+        (tester) async {
+      // Rewritten, not deleted: the dashboard DOES read the authoritative
+      // documents now, but a row whose document is absent must still omit the
+      // line rather than render zero.
       await pumpDashboard(
         tester,
         firestore: FakeFirestoreService(teacher: seededTeacher()),
@@ -234,6 +338,7 @@ void main() {
 
       expect(find.textContaining('students'), findsNothing);
       expect(find.textContaining('null'), findsNothing);
+      expect(find.byType(ClassroomCard), findsNWidgets(2));
     });
 
     testWidgets('no longer renders a heading with nothing under it',

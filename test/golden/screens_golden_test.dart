@@ -16,6 +16,7 @@ import 'package:tc_starter/features/evidence/evidence_panel.dart';
 import 'package:tc_starter/features/evidence/evidence_provider.dart';
 import 'package:tc_starter/features/learning_unit/learning_unit_provider.dart';
 import 'package:tc_starter/features/learning_unit/learning_unit_screen.dart';
+import 'package:tc_starter/features/shell/not_built_screen.dart';
 import 'package:tc_starter/features/startup/startup_failure_screen.dart';
 import 'package:tc_starter/core/models/learning_unit.dart';
 import 'package:tc_starter/core/models/workflow.dart';
@@ -475,6 +476,45 @@ void main() {
         child: StartupFailureScreen(onRetry: () async {}),
       );
       await shoot(tester, '20_startup_failure');
+    });
+  });
+
+  group('shell', () {
+    testWidgets('the dashboard inside the bottom nav', (tester) async {
+      // The only golden pumped through a real router, because MainShell derives
+      // its selected tab from the route rather than from state.
+      await pumpShell(
+        tester,
+        providers: [
+          ChangeNotifierProvider<AuthProvider>(
+            create: (_) => StubAuthProvider(),
+          ),
+          ChangeNotifierProvider<DashboardProvider>(
+            create: (_) => DashboardProvider(
+              firestore: FakeFirestoreService(
+                teacher: aTeacher(),
+                classrooms: theClassrooms(),
+              ),
+            ),
+          ),
+        ],
+        routes: {'/dashboard': (context) => const DashboardScreen()},
+      );
+      await shoot(tester, '21_shell_dashboard');
+    });
+
+    testWidgets('a tab outside this slice', (tester) async {
+      await pumpShell(
+        tester,
+        initialLocation: '/reports',
+        routes: {
+          '/reports': (context) => const NotBuiltScreen(
+            titleKey: 'nav.reports',
+            icon: Icons.bar_chart_outlined,
+          ),
+        },
+      );
+      await shoot(tester, '22_shell_reports');
     });
   });
 }

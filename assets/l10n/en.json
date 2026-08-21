@@ -7,11 +7,15 @@
     "cancel": "Cancel",
     "submit": "Submit",
     "loading": "Loading…",
-    "empty": "Nothing here yet"
+    "empty": "Nothing here yet",
+    "not_built_title": "Not part of this build yet",
+    "not_built_subtitle": "This section exists in the full Teacher Corner app. It is outside the slice being rebuilt here."
   },
   "nav": {
     "dashboard": "Home",
-    "classrooms": "Classrooms",
+    "classrooms": "Classes",
+    "quizzes": "Quizzes",
+    "reports": "Reports",
     "profile": "Profile"
   },
   "splash": {
@@ -89,7 +93,8 @@
     "error_offline": "This is taking too long. Check your connection and try again.",
     "no_profile": "You are signed in, but no teacher profile has been set up for this account yet.",
     "see_all": "See all",
-    "your_classrooms": "Your classrooms"
+    "your_classrooms": "Your classrooms",
+    "stat_students": "Students"
   },
   "classroom": {
     "stat_students": "Students",

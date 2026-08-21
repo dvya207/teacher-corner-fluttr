@@ -78,4 +78,22 @@ class ClassroomListItem {
       hasAuthoritativeDoc: full != null,
     );
   }
+
+  /// Merges a teacher's classroom summaries with whichever authoritative
+  /// documents were readable, preserving the order of [refs].
+  ///
+  /// Shared by the classroom list and the dashboard so there is one definition
+  /// of what a classroom row is. Passing an empty [full] is legitimate: it
+  /// yields rows built from the summary alone, which is what the dashboard
+  /// falls back to when the second round of reads fails.
+  static List<ClassroomListItem> mergeAll({
+    required List<ClassroomRef> refs,
+    required List<Classroom> full,
+  }) {
+    final byId = {for (final classroom in full) classroom.classroomId: classroom};
+    return [
+      for (final ref in refs)
+        ClassroomListItem.merge(ref: ref, full: byId[ref.classroomId]),
+    ];
+  }
 }

@@ -12,6 +12,7 @@ import '../../features/learning_unit/missing_workflow_screen.dart';
 import '../../features/learning_unit/learning_unit_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
+import '../../features/shell/not_built_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../services/firestore_service.dart';
 
@@ -115,6 +116,22 @@ class AppRouter {
                   },
                 ),
               ],
+            ),
+            // Present in the shell because the bottom nav is part of the app's
+            // shape, and honest about being outside this slice.
+            GoRoute(
+              path: '/quizzes',
+              builder: (context, state) => const NotBuiltScreen(
+                titleKey: 'nav.quizzes',
+                icon: Icons.quiz_outlined,
+              ),
+            ),
+            GoRoute(
+              path: '/reports',
+              builder: (context, state) => const NotBuiltScreen(
+                titleKey: 'nav.reports',
+                icon: Icons.bar_chart_outlined,
+              ),
             ),
             GoRoute(
               path: '/profile',

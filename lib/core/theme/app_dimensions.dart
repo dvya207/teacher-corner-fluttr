@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Responsive dimension tokens (R2).
@@ -30,7 +32,14 @@ class AppDimensions {
   // Component heights — height-scaled. App bar height stays a fixed 56 (a
   // platform chrome constant, like kToolbarHeight) so it is NOT scaled.
   static const double appBarHeight = 56.0;
-  static double get bottomNavHeight => 70.h;
+  /// Floored at its design value, never scaled below it.
+  ///
+  /// Same reasoning as [appBarHeight] above: a nav bar is platform chrome. `.h`
+  /// scales against an 800-tall baseline, so in landscape (360 tall) a plain
+  /// `70.h` collapses to about 31, which is less than a BottomNavigationBar can
+  /// draw an icon and a label in, and it overflowed by 57px. It may still grow
+  /// on a taller-than-baseline device.
+  static double get bottomNavHeight => math.max(70.h, 70);
   static double get inputHeight => 56.h;
   static double get buttonHeight => 52.h;
 

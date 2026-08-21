@@ -13,7 +13,6 @@ import '../../core/widgets/tc_empty_state.dart';
 import '../../core/widgets/tc_loading.dart';
 import '../../core/widgets/tc_section_label.dart';
 import '../../core/widgets/tc_status_message.dart';
-import '../../core/models/classroom_ref.dart';
 import '../auth/auth_provider.dart';
 import '../classrooms/classroom_list_item.dart';
 import '../classrooms/widgets/classroom_card.dart';
@@ -111,6 +110,14 @@ class _LoadedState extends StatelessWidget {
             title: name.isNotEmpty ? name : 'app.title'.tr(),
             subtitle: teacher?.institutionName,
             children: [
+              // Omitted when the total is not knowable, which happens when an
+              // authoritative classroom document did not load. A partial sum
+              // would understate the real figure while looking exact.
+              if (dashboard.studentTotal != null)
+                TcHeroStatTile(
+                  value: '${dashboard.studentTotal}',
+                  label: 'dashboard.stat_students'.tr(),
+                ),
               TcHeroStatTile(
                 value: '${teacher?.classroomCount ?? 0}',
                 label: 'dashboard.stat_classrooms'.tr(),
@@ -127,9 +134,7 @@ class _LoadedState extends StatelessWidget {
                     type: TcMsgType.info,
                     message: 'dashboard.no_profile'.tr(),
                   )
-                : _ClassroomShortcuts(
-                    classrooms: teacher?.classrooms ?? const [],
-                  ),
+                : _ClassroomShortcuts(classrooms: dashboard.classrooms),
           ),
         ],
       ),
@@ -147,7 +152,7 @@ class _LoadedState extends StatelessWidget {
 class _ClassroomShortcuts extends StatelessWidget {
   const _ClassroomShortcuts({required this.classrooms});
 
-  final List<ClassroomRef> classrooms;
+  final List<ClassroomListItem> classrooms;
 
   /// A dashboard is a place to start from, not a list to browse. Past a few
   /// rows the searchable Classrooms tab is the better tool, so the rest live
@@ -184,14 +189,14 @@ class _ClassroomShortcuts extends StatelessWidget {
               : null,
         ),
         SizedBox(height: AppDimensions.spacing8),
-        for (final ref in shown) ...[
+        for (final classroom in shown) ...[
           ClassroomCard(
             // Reuses the list's own card, so a classroom looks the same
             // wherever a teacher meets it.
-            classroom: ClassroomListItem.merge(ref: ref, full: null),
+            classroom: classroom,
             // `go`, not `push`: this lands inside the Classrooms branch of the
             // shell, so the bottom nav follows the teacher there.
-            onTap: () => context.go('/classrooms/${ref.classroomId}'),
+            onTap: () => context.go('/classrooms/${classroom.classroomId}'),
           ),
           SizedBox(height: AppDimensions.spacing12),
         ],
