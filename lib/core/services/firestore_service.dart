@@ -96,4 +96,18 @@ class FirestoreService {
     if (!snap.exists) return null;
     return Workflow.fromMap(snap.id, snap.data() ?? const <String, dynamic>{});
   }
+
+  /// Fetches several learning units concurrently, dropping any that do not
+  /// exist.
+  ///
+  /// Same shape and same reasoning as [fetchClassrooms]: per-document reads
+  /// degrade one row at a time, and `whereIn` caps out at 30 ids.
+  Future<List<LearningUnit>> fetchLearningUnits(
+    Iterable<String> learningUnitIds,
+  ) async {
+    final ids = learningUnitIds.toSet().toList();
+    if (ids.isEmpty) return const [];
+    final results = await Future.wait(ids.map(fetchLearningUnit));
+    return results.whereType<LearningUnit>().toList();
+  }
 }

@@ -73,5 +73,21 @@
     "error_generic": "Something went wrong loading your dashboard.",
     "error_offline": "This is taking too long. Check your connection and try again.",
     "no_profile": "You are signed in, but no teacher profile has been set up for this account yet."
+  },
+  "classroom": {
+    "stat_students": "Students",
+    "stat_programmes": "Programmes",
+    "activities": "Activities",
+    "steps_count": "{} steps",
+    "no_activities": "No activities yet",
+    "no_activities_subtitle": "This programme has no learning units assigned to this classroom.",
+    "no_programmes_title": "No programmes yet",
+    "no_programmes_subtitle": "When a programme is assigned to this classroom, its activities will appear here.",
+    "not_found_title": "Classroom not found",
+    "not_found_subtitle": "This classroom is listed on your profile, but its record no longer exists.",
+    "error_title": "Could not load this classroom",
+    "error_generic": "Something went wrong loading this classroom.",
+    "error_offline": "This is taking too long. Check your connection and try again.",
+    "missing_unit": "This activity could not be loaded."
   }
 }

@@ -74,6 +74,10 @@ class _TcStarterAppState extends State<TcStarterApp> {
         // .value, not the default constructor: this State owns _auth and
         // disposes it, and the router already holds a reference to the same
         // instance. A second owner would dispose it out from under the router.
+        // Exposed so per-route providers (the classroom detail and the
+        // learning unit) can build their own scoped instance against the
+        // same single Firestore handle.
+        Provider<FirestoreService>.value(value: _firestore),
         ChangeNotifierProvider<AuthProvider>.value(value: _auth),
         // Created by the provider, so it is disposed with the tree. Unlike
         // _auth, the router holds no reference to it.

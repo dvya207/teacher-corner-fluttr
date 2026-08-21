@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../features/auth/login_screen.dart';
+import '../../features/classrooms/classroom_detail_provider.dart';
+import '../../features/classrooms/classroom_detail_screen.dart';
 import '../../features/classrooms/classroom_list_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/placeholder_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../features/splash/splash_screen.dart';
+import '../services/firestore_service.dart';
 
 /// Router skeleton. The shell and the auth redirect are wired; the screens are
 /// replaced one per phase of the plan.
@@ -95,9 +99,18 @@ class AppRouter {
                 // Nested so the breadcrumb/back stack works: /classrooms/:id
                 GoRoute(
                   path: ':id',
-                  builder: (context, state) => PlaceholderScreen(
-                    title: 'Classroom ${state.pathParameters['id']}',
-                  ),
+                  // The provider is created per route rather than app-wide, so
+                  // opening a second classroom starts from a clean load instead
+                  // of briefly showing the previous one's data.
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    return ChangeNotifierProvider<ClassroomDetailProvider>(
+                      create: (ctx) => ClassroomDetailProvider(
+                        firestore: ctx.read<FirestoreService>(),
+                      ),
+                      child: ClassroomDetailScreen(classroomId: id),
+                    );
+                  },
                 ),
               ],
             ),
