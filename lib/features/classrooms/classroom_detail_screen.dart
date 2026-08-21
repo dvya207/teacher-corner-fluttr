@@ -155,6 +155,8 @@ class _Loaded extends StatelessWidget {
                                   : () => context.push(
                                         '/lu/${activity.learningUnitId}'
                                         '?classroomId=$classroomId'
+                                        '&programmeId='
+                                        '${entry.programme.programmeId}'
                                         '&workflowId=${activity.workflowId}',
                                       ),
                             ),

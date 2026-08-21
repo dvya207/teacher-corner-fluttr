@@ -139,6 +139,7 @@ class AppRouter {
             if (workflowId.isEmpty) {
               return const MissingWorkflowScreen();
             }
+            final query = state.uri.queryParameters;
             return ChangeNotifierProvider<LearningUnitProvider>(
               create: (ctx) => LearningUnitProvider(
                 firestore: ctx.read<FirestoreService>(),
@@ -146,6 +147,11 @@ class AppRouter {
               child: LearningUnitScreen(
                 learningUnitId: learningUnitId,
                 workflowId: workflowId,
+                // Both needed to address the evidence document, which is one
+                // per classroom+programme. Absent, the steps still work and
+                // only the evidence pane says it cannot be reached.
+                classroomId: query['classroomId']?.trim(),
+                programmeId: query['programmeId']?.trim(),
               ),
             );
           },

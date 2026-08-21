@@ -104,5 +104,29 @@
     "error_generic": "Something went wrong loading this classroom.",
     "error_offline": "This is taking too long. Check your connection and try again.",
     "missing_unit": "This activity could not be loaded."
+  },
+  "evidence": {
+    "title": "Photo evidence",
+    "intro": "Photograph what the children built.",
+    "limit": "You can add up to {} photos, {} MB each.",
+    "counter": "{} of {} added",
+    "from_camera": "Camera",
+    "from_gallery": "Gallery",
+    "ready_title": "Ready to submit",
+    "submitted_title": "Submitted",
+    "submit": "Submit {} photos",
+    "submit_one": "Submit 1 photo",
+    "submitting": "Uploading…",
+    "remove": "Remove",
+    "empty_title": "No photos yet",
+    "empty_subtitle": "Add a photo from the camera or the gallery, then submit.",
+    "not_uploaded_yet": "Not uploaded yet. Nothing is sent until you press Submit.",
+    "error_limit": "You have already added {} photos. Remove one to add another.",
+    "error_too_large": "That photo is larger than {} MB. Try again with a smaller one.",
+    "error_pick_failed": "Could not open that photo. Try again.",
+    "error_upload_failed": "Upload failed, so nothing was submitted. Your photos are still here, try again.",
+    "error_offline": "No connection, so nothing was submitted. Your photos are still here, try again when you are back online.",
+    "error_remove_failed": "Could not remove that photo. Try again.",
+    "error_load": "Could not load what you have already submitted."
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:tc_starter/core/models/assignment_evidence.dart';
 import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/learning_unit.dart';
 import 'package:tc_starter/core/models/teacher.dart';
@@ -21,6 +22,10 @@ class FakeFirestoreService extends FirestoreService {
     this.throws,
     this.throwsOnClassroom,
     this.throwsOnLearningUnit,
+    this.evidence,
+    this.throwsOnWriteEvidence,
+    this.throwsOnFetchEvidence,
+    this.log,
     this.gate,
   });
 
@@ -37,6 +42,18 @@ class FakeFirestoreService extends FirestoreService {
 
   /// Thrown by [fetchLearningUnit] when set.
   final Object? throwsOnLearningUnit;
+
+  /// The evidence already recorded, if any.
+  AssignmentEvidence? evidence;
+
+  final Object? throwsOnWriteEvidence;
+  final Object? throwsOnFetchEvidence;
+
+  /// Shared ordered log, so a test can assert that the Firestore write happened
+  /// BEFORE the Storage delete.
+  final List<String>? log;
+
+  final List<AssignmentEvidence> writes = [];
 
   /// When set, [fetchTeacher] does not complete until the test completes this.
   /// Used for the timeout path and the re-entry guard.
@@ -94,6 +111,32 @@ class FakeFirestoreService extends FirestoreService {
       if (workflow.workflowId == workflowId) return workflow;
     }
     return null;
+  }
+
+  @override
+  Future<AssignmentEvidence?> fetchEvidence({
+    required String uid,
+    required String classroomId,
+    required String programmeId,
+    required String assignmentId,
+  }) async {
+    log?.add('fetchEvidence');
+    if (gate != null) await gate!.future;
+    if (throwsOnFetchEvidence != null) throw throwsOnFetchEvidence!;
+    return evidence;
+  }
+
+  @override
+  Future<void> writeEvidence({
+    required String uid,
+    required String classroomId,
+    required String programmeId,
+    required AssignmentEvidence evidence,
+  }) async {
+    log?.add('writeEvidence');
+    if (throwsOnWriteEvidence != null) throw throwsOnWriteEvidence!;
+    writes.add(evidence);
+    this.evidence = evidence;
   }
 }
 

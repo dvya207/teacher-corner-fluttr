@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../firebase/firestore_ref.dart';
+import '../models/assignment_evidence.dart';
 import '../models/classroom.dart';
 import '../models/learning_unit.dart';
 import '../models/teacher.dart';
 import '../models/workflow.dart';
+import '../utils/safe_parse.dart';
 
 /// Every Firestore read in the app goes through this class. No screen and no
 /// provider touches `cloud_firestore` directly.
@@ -110,4 +112,71 @@ class FirestoreService {
     final results = await Future.wait(ids.map(fetchLearningUnit));
     return results.whereType<LearningUnit>().toList();
   }
+
+  // ── Evidence ───────────────────────────────────────────────────────────────
+
+  DocumentReference<Map<String, dynamic>> _submissionDoc({
+    required String uid,
+    required String classroomId,
+    required String programmeId,
+  }) =>
+      _db
+          .collection(Teacher.collection)
+          .doc(uid)
+          .collection(AssignmentEvidence.submissionsSubcollection)
+          .doc(AssignmentEvidence.documentId(
+            classroomId: classroomId,
+            programmeId: programmeId,
+          ));
+
+  /// The evidence recorded for one assignment, or null when nothing has been
+  /// submitted yet. A missing document is the normal starting state.
+  Future<AssignmentEvidence?> fetchEvidence({
+    required String uid,
+    required String classroomId,
+    required String programmeId,
+    required String assignmentId,
+  }) async {
+    final snap = await _submissionDoc(
+      uid: uid,
+      classroomId: classroomId,
+      programmeId: programmeId,
+    ).get();
+    if (!snap.exists) return null;
+
+    final data = snap.data() ?? const <String, dynamic>{};
+    final raw = data[assignmentId];
+    if (raw == null) return null;
+
+    return AssignmentEvidence.fromMap(
+      assignmentId,
+      SafeParse.asStringKeyedMap(
+        raw,
+        collection: AssignmentEvidence.submissionsSubcollection,
+        docId: snap.id,
+        field: assignmentId,
+      ),
+      docId: snap.id,
+    );
+  }
+
+  /// Writes one assignment's evidence.
+  ///
+  /// Merged at the assignment key so sibling assignments in the same
+  /// classroom+programme document are untouched. Array fields are replaced
+  /// wholesale by a merge, which is what a removal needs.
+  Future<void> writeEvidence({
+    required String uid,
+    required String classroomId,
+    required String programmeId,
+    required AssignmentEvidence evidence,
+  }) =>
+      _submissionDoc(
+        uid: uid,
+        classroomId: classroomId,
+        programmeId: programmeId,
+      ).set(
+        {evidence.assignmentId: evidence.toMap()},
+        SetOptions(merge: true),
+      );
 }

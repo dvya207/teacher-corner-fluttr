@@ -7,6 +7,8 @@ import 'package:tc_starter/core/models/workflow.dart';
 import 'package:tc_starter/core/widgets/tc_storage_image.dart';
 import 'package:tc_starter/features/learning_unit/learning_unit_provider.dart';
 import 'package:tc_starter/features/learning_unit/learning_unit_screen.dart';
+import 'package:tc_starter/features/auth/auth_provider.dart';
+import 'package:tc_starter/features/evidence/evidence_panel.dart';
 import 'package:tc_starter/features/learning_unit/widgets/step_indicator.dart';
 
 import '../../support/fakes.dart';
@@ -74,6 +76,9 @@ Future<void> pumpLu(
   Duration timeout = const Duration(seconds: 15),
   Size surfaceSize = const Size(360, 800),
   TextScaler textScaler = TextScaler.noScaling,
+  String? classroomId,
+  String? programmeId,
+  EvidencePanelBuilder? evidencePanelBuilder,
 }) =>
     pumpScreen(
       tester,
@@ -81,6 +86,9 @@ Future<void> pumpLu(
       surfaceSize: surfaceSize,
       textScaler: textScaler,
       providers: [
+        // The screen reads the uid off AuthProvider to address the evidence
+        // document.
+        ChangeNotifierProvider<AuthProvider>(create: (_) => StubAuthProvider()),
         ChangeNotifierProvider<LearningUnitProvider>(
           create: (_) => LearningUnitProvider(
             firestore: FakeFirestoreService(
@@ -93,9 +101,12 @@ Future<void> pumpLu(
           ),
         ),
       ],
-      child: const LearningUnitScreen(
+      child: LearningUnitScreen(
         learningUnitId: _lu,
         workflowId: _wf,
+        classroomId: classroomId,
+        programmeId: programmeId,
+        evidencePanelBuilder: evidencePanelBuilder,
       ),
     );
 
@@ -229,14 +240,38 @@ void main() {
       expect(find.text('Nothing to show here'), findsOneWidget);
     });
 
-    testWidgets('the evidence step is recognised as an upload assignment',
-        (tester) async {
+    testWidgets('the evidence step renders the evidence pane', (tester) async {
+      await pumpLu(
+        tester,
+        unit: theUnit(),
+        workflow: theWorkflow(),
+        classroomId: 'cls_oak_7a',
+        programmeId: 'prog_tip_2026',
+        // Injected, so the pane renders without Storage or a camera behind it.
+        evidencePanelBuilder: (context, target) => Column(
+          children: [
+            Text('panel:${target.assignmentId}'),
+            Text('for:${target.classroomId}/${target.programmeId}'),
+          ],
+        ),
+      );
+
+      await tapStep(tester, 'Capture evidence');
+
+      expect(find.text('panel:asg_mps_evidence'), findsOneWidget);
+      // The ids that address the submission document arrive intact.
+      expect(find.text('for:cls_oak_7a/prog_tip_2026'), findsOneWidget);
+    });
+
+    testWidgets('without the addressing ids the pane refuses rather than '
+        'guessing', (tester) async {
+      // A submission written under the wrong classroom or programme is worse
+      // than one not written at all.
       await pumpLu(tester, unit: theUnit(), workflow: theWorkflow());
 
       await tapStep(tester, 'Capture evidence');
 
-      // Phase 5 fills this pane in; for now it identifies itself.
-      expect(find.text('Evidence'), findsWidgets);
+      expect(find.byType(EvidenceUnavailable), findsOneWidget);
     });
   });
 

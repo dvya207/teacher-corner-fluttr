@@ -12,6 +12,12 @@ import '../../core/widgets/tc_button.dart';
 import '../../core/widgets/tc_empty_state.dart';
 import '../../core/widgets/tc_loading.dart';
 import '../../core/widgets/tc_status_message.dart';
+import '../auth/auth_provider.dart';
+import '../evidence/evidence_panel.dart';
+import '../evidence/evidence_provider.dart';
+import '../../core/services/evidence_storage.dart';
+import '../../core/services/firestore_service.dart';
+import '../../core/services/photo_picker.dart';
 import 'learning_unit_provider.dart';
 import 'widgets/content_pane.dart';
 import 'widgets/step_indicator.dart';
@@ -24,10 +30,21 @@ class LearningUnitScreen extends StatefulWidget {
     super.key,
     required this.learningUnitId,
     required this.workflowId,
+    this.classroomId,
+    this.programmeId,
+    this.evidencePanelBuilder,
   });
 
   final String learningUnitId;
   final String workflowId;
+
+  /// Needed to address the evidence document. Null when this screen was reached
+  /// by a link that did not carry them.
+  final String? classroomId;
+  final String? programmeId;
+
+  /// Injected by tests so the evidence pane can be exercised without Storage.
+  final EvidencePanelBuilder? evidencePanelBuilder;
 
   @override
   State<LearningUnitScreen> createState() => _LearningUnitScreenState();
@@ -50,6 +67,59 @@ class _LearningUnitScreenState extends State<LearningUnitScreen> {
         workflowId: widget.workflowId,
       );
     });
+  }
+
+  /// Builds the evidence pane for an upload assignment.
+  ///
+  /// Refuses rather than guesses when the ids that address the submission
+  /// document are missing: a submission written under the wrong classroom or
+  /// programme is worse than one not written at all.
+  Widget _buildEvidence(BuildContext context, WorkflowStep step,
+      WorkflowContent content) {
+    final classroomId = widget.classroomId;
+    final programmeId = widget.programmeId;
+    final assignmentId = content.assignmentId ?? step.assignmentId;
+    final uid = context.read<AuthProvider>().uid;
+
+    if (classroomId == null ||
+        classroomId.isEmpty ||
+        programmeId == null ||
+        programmeId.isEmpty ||
+        assignmentId == null ||
+        assignmentId.isEmpty ||
+        uid == null ||
+        uid.isEmpty) {
+      return const EvidenceUnavailable();
+    }
+
+    final target = EvidenceTarget(
+      classroomId: classroomId,
+      programmeId: programmeId,
+      learningUnitId: widget.learningUnitId,
+      assignmentId: assignmentId,
+      displayName: content.contentName,
+    );
+
+    final builder = widget.evidencePanelBuilder ?? _defaultEvidencePanel;
+    return builder(context, target);
+  }
+
+  Widget _defaultEvidencePanel(BuildContext context, EvidenceTarget target) {
+    final uid = context.read<AuthProvider>().uid!;
+    return ChangeNotifierProvider<EvidenceProvider>(
+      create: (ctx) => EvidenceProvider(
+        firestore: ctx.read<FirestoreService>(),
+        storage: FirebaseEvidenceStorage(),
+        picker: ImagePickerPhotoPicker(),
+        uid: uid,
+        classroomId: target.classroomId,
+        programmeId: target.programmeId,
+        learningUnitId: target.learningUnitId,
+        assignmentId: target.assignmentId,
+        displayName: target.displayName,
+      ),
+      child: const EvidencePanel(),
+    );
   }
 
   @override
@@ -76,6 +146,7 @@ class _LearningUnitScreenState extends State<LearningUnitScreen> {
           tabByStep: _tabByStep,
           onTabSelected: (stepId, index) =>
               setState(() => _tabByStep[stepId] = index),
+          evidenceBuilder: _buildEvidence,
         ),
       },
     );
@@ -115,11 +186,17 @@ class _Loaded extends StatelessWidget {
     required this.provider,
     required this.tabByStep,
     required this.onTabSelected,
+    required this.evidenceBuilder,
   });
 
   final LearningUnitProvider provider;
   final Map<String, int> tabByStep;
   final void Function(String stepId, int index) onTabSelected;
+  final Widget Function(
+    BuildContext context,
+    WorkflowStep step,
+    WorkflowContent content,
+  ) evidenceBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +279,9 @@ class _Loaded extends StatelessWidget {
                           '${step.workflowStepId}:${content.contentName}',
                         ),
                         content: content,
+                        evidenceBuilder: content.isUploadAssignment
+                            ? (ctx) => evidenceBuilder(ctx, step, content)
+                            : null,
                       ),
                   ],
                 ),
