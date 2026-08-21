@@ -9,7 +9,20 @@ import 'package:tc_starter/features/auth/login_screen.dart';
 import 'package:tc_starter/features/classrooms/classroom_list_screen.dart';
 import 'package:tc_starter/features/classrooms/classroom_provider.dart';
 import 'package:tc_starter/features/dashboard/dashboard_provider.dart';
+import 'package:tc_starter/features/classrooms/classroom_detail_provider.dart';
+import 'package:tc_starter/features/classrooms/classroom_detail_screen.dart';
 import 'package:tc_starter/features/dashboard/dashboard_screen.dart';
+import 'package:tc_starter/features/evidence/evidence_panel.dart';
+import 'package:tc_starter/features/evidence/evidence_provider.dart';
+import 'package:tc_starter/features/learning_unit/learning_unit_provider.dart';
+import 'package:tc_starter/features/learning_unit/learning_unit_screen.dart';
+import 'package:tc_starter/features/startup/startup_failure_screen.dart';
+import 'package:tc_starter/core/models/learning_unit.dart';
+import 'package:tc_starter/core/models/workflow.dart';
+import 'package:tc_starter/core/services/evidence_storage.dart';
+import 'package:tc_starter/core/services/photo_picker.dart';
+import 'dart:io';
+import 'package:tc_starter/core/models/assignment_evidence.dart';
 import 'package:tc_starter/features/profile/profile_screen.dart';
 import 'package:tc_starter/features/splash/splash_screen.dart';
 
@@ -72,6 +85,86 @@ List<Classroom> theClassrooms() => [
         'studentCounter': 12,
       }),
     ];
+
+/// The classroom as the DETAIL screen sees it: with a programme, and the
+/// workflow binding that programme carries.
+Classroom detailClassroom() => Classroom.fromMap('cls_oak_7a', {
+      'classroomName': '7 A',
+      'grade': 7,
+      'section': 'A',
+      'board': 'CBSE',
+      'institutionName': 'Test School Oak',
+      'studentCounter': 32,
+      'programmes': {
+        'prog_tip_2026': {
+          'displayName': 'TIP 2026',
+          'workflowIds': [
+            {
+              'learningUnitId': 'lu_magnetic_pen_stand',
+              'workflowId': 'wf_mps_v1',
+            },
+          ],
+        },
+      },
+    });
+
+LearningUnit theUnit() => LearningUnit.fromMap('lu_magnetic_pen_stand', {
+      'learningUnitDisplayName': 'Magnetic Pen Stand',
+      'type': 'TACtivity',
+      'shortDescription':
+          'Build a pen stand that holds itself up with magnets, then explain '
+          'why it does not fall over.',
+      'stepCount': 6,
+      'subjectName': 'Science',
+    });
+
+Workflow theWorkflow() => Workflow.fromMap('wf_mps_v1', {
+      'steps': [
+        {'workflowStepId': 's2', 'workflowStepName': 'Gather materials',
+          'sequenceNumber': 2, 'workflowStepDuration': 5,
+          'canSkipWorkflowStep': true,
+          'contents': [
+            {'contentName': 'Material List', 'contentCategory': 'material',
+             'resourcePath': ''},
+          ]},
+        {'workflowStepId': 's1', 'workflowStepName': 'Introduce the problem',
+          'sequenceNumber': 1, 'workflowStepDuration': 10,
+          'contents': [
+            {'contentName': 'Guide', 'contentCategory': 'guide',
+             'resourcePath': ''},
+            {'contentName': 'Diagram', 'contentCategory': 'image',
+             'contentType': 'image', 'resourcePath': 'luImages/mps_intro.png'},
+          ]},
+        {'workflowStepId': 's3', 'workflowStepName': 'Build it',
+          'sequenceNumber': 3, 'workflowStepDuration': 25,
+          'contents': <dynamic>[]},
+        {'workflowStepId': 's6', 'workflowStepName': 'Capture evidence',
+          'sequenceNumber': 6, 'allowArtefactUpload': true,
+          'assignmentId': 'asg_mps_evidence',
+          'contents': [
+            {'contentName': 'Photo evidence', 'contentCategory': 'assignment',
+             'assignmentType': 'UPLOAD', 'assignmentId': 'asg_mps_evidence',
+             'resourcePath': ''},
+          ]},
+      ],
+    });
+
+class _NoopStorage implements EvidenceStorage {
+  @override
+  Future<String> upload({
+    required String storagePath,
+    required File file,
+    String contentType = 'image/jpeg',
+  }) async =>
+      'https://example/x';
+  @override
+  Future<void> delete(String storagePath) async {}
+}
+
+class _NoPicker implements PhotoPicker {
+  @override
+  Future<PickedPhoto?> pick(PhotoSource source) async => null;
+}
 
 void main() {
   setUpAll(loadAppFonts);
@@ -274,6 +367,114 @@ void main() {
         child: const ProfileScreen(),
       );
       await shoot(tester, '15_profile');
+    });
+  });
+
+  group('classroom', () {
+    testWidgets('detail', (tester) async {
+      await pumpScreen(
+        tester,
+        providers: [
+          ChangeNotifierProvider<ClassroomDetailProvider>(
+            create: (_) => ClassroomDetailProvider(
+              firestore: FakeFirestoreService(
+                classrooms: [detailClassroom()],
+                learningUnits: [theUnit()],
+              ),
+            ),
+          ),
+        ],
+        child: const ClassroomDetailScreen(classroomId: 'cls_oak_7a'),
+      );
+      await shoot(tester, '16_classroom_detail');
+    });
+  });
+
+  group('learning unit', () {
+    Future<void> pumpLu(WidgetTester tester) => pumpScreen(
+          tester,
+          providers: [
+            ChangeNotifierProvider<AuthProvider>(
+                create: (_) => StubAuthProvider()),
+            ChangeNotifierProvider<LearningUnitProvider>(
+              create: (_) => LearningUnitProvider(
+                firestore: FakeFirestoreService(
+                  learningUnits: [theUnit()],
+                  workflows: [theWorkflow()],
+                ),
+              ),
+            ),
+          ],
+          child: const LearningUnitScreen(
+            learningUnitId: 'lu_magnetic_pen_stand',
+            workflowId: 'wf_mps_v1',
+            classroomId: 'cls_oak_7a',
+            programmeId: 'prog_tip_2026',
+          ),
+        );
+
+    testWidgets('steps and content tabs', (tester) async {
+      await pumpLu(tester);
+      await shoot(tester, '17_learning_unit');
+    });
+  });
+
+  group('evidence', () {
+    Future<void> pumpEvidence(
+      WidgetTester tester,
+      AssignmentEvidence? existing,
+    ) =>
+        pumpScreen(
+          tester,
+          providers: [
+            ChangeNotifierProvider<EvidenceProvider>(
+              create: (_) => EvidenceProvider(
+                firestore: FakeFirestoreService(evidence: existing),
+                storage: _NoopStorage(),
+                picker: _NoPicker(),
+                uid: 'uid_teacher',
+                classroomId: 'cls_oak_7a',
+                programmeId: 'prog_tip_2026',
+                learningUnitId: 'lu_magnetic_pen_stand',
+                assignmentId: 'asg_mps_evidence',
+                displayName: 'Photo evidence',
+                clock: () => 1787132584464,
+              ),
+            ),
+          ],
+          child: const Scaffold(body: EvidencePanel()),
+        );
+
+    testWidgets('nothing added yet', (tester) async {
+      await pumpEvidence(tester, null);
+      await shoot(tester, '18_evidence_empty');
+    });
+
+    testWidgets('with photos already submitted', (tester) async {
+      await pumpEvidence(
+        tester,
+        const AssignmentEvidence(
+          assignmentId: 'asg_mps_evidence',
+          displayName: 'Photo evidence',
+          photoUrls: ['https://example/a', 'https://example/b'],
+          storagePaths: [
+            'activityEvidence/cls_oak_7a/lu_magnetic_pen_stand/u_1_0.jpg',
+            'activityEvidence/cls_oak_7a/lu_magnetic_pen_stand/u_1_1.jpg',
+          ],
+        ),
+      );
+      await shoot(tester, '19_evidence_submitted');
+    });
+  });
+
+  group('startup', () {
+    testWidgets('a failed start offers a retry instead of hanging',
+        (tester) async {
+      await pumpScreen(
+        tester,
+        child: StartupFailureScreen(onRetry: () async {}),
+      );
+      await shoot(tester, '20_startup_failure');
     });
   });
 }

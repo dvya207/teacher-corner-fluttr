@@ -59,11 +59,13 @@ Future<void> pumpList(
   bool settle = true,
   Duration timeout = const Duration(seconds: 15),
   Size surfaceSize = const Size(360, 800),
+  TextScaler textScaler = TextScaler.noScaling,
 }) {
   return pumpScreen(
     tester,
     settle: settle,
     surfaceSize: surfaceSize,
+    textScaler: textScaler,
     providers: [
       ChangeNotifierProvider<AuthProvider>(create: (_) => StubAuthProvider()),
       ChangeNotifierProvider<ClassroomProvider>(
@@ -295,6 +297,57 @@ void main() {
         tester,
         firestore: FakeFirestoreService(throws: StateError('boom')),
         surfaceSize: landscape,
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('at the maximum system font size', () {
+    // clampTextScaler caps the system contribution at 1.3x, so this is the
+    // largest the layout ever has to survive.
+    testWidgets('the list does not overflow or clip its cards', (tester) async {
+      await pumpList(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          classrooms: seededClassrooms(),
+        ),
+        textScaler: const TextScaler.linear(3.0),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ClassroomCard), findsNWidgets(2));
+      expect(find.text('7 A'), findsOneWidget);
+    });
+
+    testWidgets('the empty state does not overflow', (tester) async {
+      await pumpList(
+        tester,
+        firestore: FakeFirestoreService(teacher: Teacher.fromMap('uid_1', {})),
+        textScaler: const TextScaler.linear(3.0),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a long institution name still fits', (tester) async {
+      await pumpList(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: Teacher.fromMap('uid_1', {
+            'classrooms': {
+              'cls_long': {
+                'classroomName': '7 A',
+                'grade': 7,
+                'section': 'A',
+                'institutionName': 'Government Higher Secondary School for '
+                    'Girls, Thiruvananthapuram North',
+              },
+            },
+          }),
+        ),
+        textScaler: const TextScaler.linear(3.0),
       );
 
       expect(tester.takeException(), isNull);

@@ -109,8 +109,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 if (!isPhoneStage) ...[
                   SizedBox(height: AppDimensions.spacing8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Wrap, not Row: at the 1.3x font ceiling the two labels
+                  // together exceed a 360dp width and a Row overflowed by
+                  // 50px. Wrap spaces them apart when they fit and drops the
+                  // second onto its own line when they do not.
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    runSpacing: AppDimensions.spacing4,
                     children: [
                       TextButton(
                         onPressed: auth.isBusy ? null : auth.changeNumber,

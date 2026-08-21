@@ -128,5 +128,10 @@
     "error_offline": "No connection, so nothing was submitted. Your photos are still here, try again when you are back online.",
     "error_remove_failed": "Could not remove that photo. Try again.",
     "error_load": "Could not load what you have already submitted."
+  },
+  "startup": {
+    "error_title": "Teacher Corner could not start",
+    "error_message": "Something went wrong setting up the app on this device. Try again, and if it keeps happening, reinstall.",
+    "retry": "Try again"
   }
 }

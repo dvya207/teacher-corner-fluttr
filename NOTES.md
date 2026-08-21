@@ -120,17 +120,73 @@ flutter test --update-goldens test/golden/screens_golden_test.dart
 The goldens are rendered against fakes on a 360x800 surface. They show layout,
 type and colour, and they prove nothing about whether the real reads work.
 
+## What Phases 3 to 6 added to the list
+
+**The workflow binding has to travel in the URL.** Because which workflow runs
+is a property of the classroom, `/lu/:id` cannot resolve on its own. It takes
+`workflowId` (and `classroomId` + `programmeId` for the evidence document) as
+query parameters and refuses to load without them, rather than picking a
+workflow and walking the teacher through steps their class is not doing. That
+made a whole screen, `MissingWorkflowScreen`, exist purely to encode a
+data-model rule.
+
+**`contents` has no text field.** SCHEMA.md gives each content a
+`contentName`, a category, a type and a `resourcePath`, and nothing to read.
+Every seeded content has `resourcePath: ''`, which is present but useless. So
+"render a text content type" resolves to: show the content's name, render the
+image when the path points at one, name the file when it points at a document,
+and say plainly when there is nothing attached. The learning unit's own
+`shortDescription` is the only real prose in the data, and it sits above the
+step strip. **This is the one thing I would want confirmed** — if contents are
+supposed to carry a body somewhere, I have not found the field.
+
+**Nothing about the evidence ordering is arbitrary.** Uploads wait for Submit,
+so a photo the teacher reconsiders needs no cleanup. A failed upload deletes
+what already landed, because those objects are unreferenced the moment the
+write does not happen. Removal writes Firestore first and deletes second: that
+order fails towards an unreferenced file, and the reverse fails towards a record
+pointing at a deleted object, which breaks every render of that submission.
+
+**Startup had the exact shape of the bug the brief describes.** `main` awaited
+`Firebase.initializeApp` unguarded, so anything throwing there left a blank
+splash with no way out. It now runs through `runStartup`, which cannot throw and
+grades the two steps differently: localization failing is cosmetic and the app
+still runs with keys showing, Firebase failing means there is no data layer and
+the app says so with a Retry.
+
+**A missing plugin mock was hiding a whole class of untestable widget.** Any
+widget rendering a Storage-path image reaches the file cache, which asks
+path_provider where to put files, which has no implementation in a test. Until
+that channel was mocked in the harness, an image-bearing screen could not be
+pumped at all, which is exactly how such a screen ends up with no test.
+
+## Four layout bugs the tests found, none of which a passing unit test would
+
+- `TcEmptyState` overflowed 144px in landscape.
+- The learning unit's header block overflowed 325px in landscape.
+- A step chip overflowed 5.3px at the 1.3x font ceiling: I had capped the chip's
+  own width while its contents could not shrink.
+- The login screen's "Change number / Resend code" row overflowed 50px at the
+  same ceiling. Now a `Wrap`, so it reflows.
+
+All four came from the same root cause, which is still open: the tokens scale
+`.w` and `.sp` against a 360-wide baseline, so a wide viewport inflates
+everything horizontally while `.r` shrinks. I have fixed each site to be
+resilient rather than capping the width scale globally, because that is a
+design-system decision with app-wide consequences and not mine to take
+unilaterally.
+
 ## Still unverified
 
-Everything below needs either a working device or seeded data, and I have
-neither yet. Listed so it is not mistaken for done:
+Everything below has only ever run against fakes. Listed so it is not mistaken
+for done:
 
-- Both Phase 1 acceptance checks (cold start without a login flash, and sign-out
-  locking every route). The redirect logic is unit-tested; the behaviour is not.
-- Every screen against real data. The providers are tested behind fakes.
-- Phase 4's caching work, which is the part PLAN warns is easy to get invisibly
-  wrong. `seed.js` writes no `learningUnitPreviewImage` and every content's
-  `resourcePath` is the empty string, so there is nothing in Storage to resolve
-  or cache against yet.
-- Rotation and maximum system font size on every screen. Screens are built
-  scrollable for this, but built-for is not tested-for.
+- Both Phase 1 acceptance checks. The redirect is unit-tested and the app has
+  been seen to land on `/login` from a cold start on a real emulator, but no
+  signed-in session has been killed and reopened.
+- Every Firestore read, against real seeded documents.
+- Every Storage interaction in Phases 4 and 5: no image has been resolved from a
+  real bucket, and no evidence has been uploaded, recorded or deleted for real.
+  The ordering guarantees are proven against a recording fake only.
+- The Firestore rules, which are written and dry-run but not deployed.
+- Rotation and font scaling on real hardware rather than a test surface.

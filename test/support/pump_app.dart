@@ -50,14 +50,27 @@ void initLocalizationForTest({String locale = 'en'}) {
     fallbackTranslations: fallback,
   );
 
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
   // Some plugins reached by the widget tree persist preferences. Nothing under
   // test depends on what comes back, only on the call not throwing.
-  const prefs = MethodChannel('plugins.flutter.io/shared_preferences');
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(prefs, (call) async {
-        if (call.method == 'getAll') return <String, Object>{};
-        return true;
-      });
+  messenger.setMockMethodCallHandler(
+    const MethodChannel('plugins.flutter.io/shared_preferences'),
+    (call) async {
+      if (call.method == 'getAll') return <String, Object>{};
+      return true;
+    },
+  );
+
+  // The image file cache asks path_provider where to put its files. Without
+  // this, any widget rendering a Storage-path image is simply untestable, which
+  // is how an image-bearing screen ends up with no test at all.
+  final cacheRoot = Directory.systemTemp.createTempSync('tc_test_cache').path;
+  messenger.setMockMethodCallHandler(
+    const MethodChannel('plugins.flutter.io/path_provider'),
+    (call) async => cacheRoot,
+  );
 }
 
 /// Pumps one screen inside the scaffolding `main.dart` gives it.
