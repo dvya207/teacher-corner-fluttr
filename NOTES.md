@@ -176,6 +176,41 @@ resilient rather than capping the width scale globally, because that is a
 design-system decision with app-wide consequences and not mine to take
 unilaterally.
 
+## The Phase 4 fixtures, and why they look like that
+
+`seed.js` originally wrote no `learningUnitPreviewImage`, no `longDescription`,
+no `resources`, and an empty `resourcePath` on every content, so Phase 4 had
+nothing to resolve. Since the fixtures were left to me, four decisions:
+
+**The objects are uploaded, not just referenced.** A Storage path in Firestore
+with nothing behind it renders as a placeholder forever, and the next person
+debugs the app instead of the seed. The seed now generates three PNGs and
+uploads them alongside the documents, so every referenced path resolves.
+
+**The images are generated in code, not committed.** `tools/fixture_images.js`
+assembles PNGs by hand with Node's zlib. Binary fixtures rot silently in a repo
+and a reviewer cannot see what is in them; a flat brand colour with a border is
+obviously a fixture and is thirty lines of readable code.
+
+**Fixture paths are namespaced by database id.** SCHEMA.md's example reads
+`luImages/mps_200x200.png`, but each developer's named Firestore database shares
+ONE Storage bucket in this project. Un-namespaced, every seed run silently
+overwrites everyone else's fixture. The app never cares what a path looks like,
+only that it is stable, so the prefix costs nothing and prevents a confusing
+class of bug. This is the one place I deliberately deviated from the schema
+example, and it is worth a second opinion.
+
+**Some contents keep an empty `resourcePath`.** Steps 1 and 6, and the second
+content on step 3, still carry nothing renderable. That is not laziness: a
+content that exists but has no body is a real state in this data, and I want the
+fixtures to contain it so the "nothing attached yet" pane is exercised by
+running the app rather than only by a unit test.
+
+**`tools/seed_dryrun.js`** runs the seed against a stubbed Admin SDK and prints
+what it would write, with no credentials. The seed is the one piece of this
+project that cannot be unit tested, and its last line is the check that matters:
+any Storage path referenced in Firestore with no object behind it.
+
 ## Still unverified
 
 Everything below has only ever run against fakes. Listed so it is not mistaken
@@ -188,5 +223,8 @@ for done:
 - Every Storage interaction in Phases 4 and 5: no image has been resolved from a
   real bucket, and no evidence has been uploaded, recorded or deleted for real.
   The ordering guarantees are proven against a recording fake only.
+- The seed itself. Its shape is verified by `tools/seed_dryrun.js`, but it has
+  never run against the real project, so neither the Firestore writes nor the
+  three Storage uploads have actually happened.
 - The Firestore rules, which are written and dry-run but not deployed.
 - Rotation and font scaling on real hardware rather than a test surface.

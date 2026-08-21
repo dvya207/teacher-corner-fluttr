@@ -17,8 +17,8 @@ Map<String, dynamic> seededWorkflow() => {
         {
           'contentName': 'Material List',
           'contentCategory': 'material',
-          'contentType': 'material',
-          'resourcePath': '',
+          'contentType': 'image',
+          'resourcePath': 'luContent/divya-teacher-corner/mps_materials.png',
         },
       ],
     },
@@ -44,7 +44,22 @@ Map<String, dynamic> seededWorkflow() => {
       'workflowStepName': 'Build it',
       'sequenceNumber': 3,
       'allowArtefactUpload': false,
-      'contents': <dynamic>[],
+      // Two contents: one real image, one deliberately empty, so the tab strip
+      // has both a positive render and the nothing-attached state.
+      'contents': [
+        {
+          'contentName': 'Assembly',
+          'contentCategory': 'image',
+          'contentType': 'image',
+          'resourcePath': 'luContent/divya-teacher-corner/mps_step3_assembly.png',
+        },
+        {
+          'contentName': 'Teacher notes',
+          'contentCategory': 'guide',
+          'contentType': 'guide',
+          'resourcePath': '',
+        },
+      ],
     },
     {
       'workflowStepId': 's4',
@@ -173,9 +188,26 @@ void main() {
     });
 
     test('an empty resourcePath is not mistaken for a resource', () {
-      // Every seeded content has resourcePath: '', which is present but useless.
+      // Step 1's Guide is present but carries nothing renderable, which is a
+      // real seeded state and not an oversight.
       final workflow = Workflow.fromMap('wf_mps_v1', seededWorkflow());
       expect(workflow.steps.first.contents.single.hasResource, isFalse);
+    });
+
+    test('the seeded image contents resolve as images with real paths', () {
+      final workflow = Workflow.fromMap('wf_mps_v1', seededWorkflow());
+
+      final materials = workflow.steps[1].contents.single;
+      expect(materials.isImage, isTrue);
+      expect(materials.hasResource, isTrue);
+      // A Storage path, never a URL.
+      expect(materials.resourcePath, isNot(startsWith('http')));
+
+      final build = workflow.steps[2].contents;
+      expect(build, hasLength(2));
+      expect(build.first.isImage, isTrue);
+      expect(build.first.hasResource, isTrue);
+      expect(build.last.hasResource, isFalse);
     });
 
     test('the evidence step is findable without hardcoding step 6', () {

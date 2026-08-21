@@ -1,15 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tc_starter/core/models/learning_unit.dart';
 
-/// `LearningUnits/lu_magnetic_pen_stand` as seeded. Note what seed.js does NOT
-/// write: learningUnitPreviewImage, longDescription or resources.
+/// `LearningUnits/lu_magnetic_pen_stand` as seeded.
 Map<String, dynamic> seededLearningUnit() => {
   'learningUnitDisplayName': 'Magnetic Pen Stand',
   'type': 'TACtivity',
   'shortDescription': 'Build a pen stand that holds itself up with magnets.',
+  'longDescription':
+      'Children build a pen stand from card and two magnets, then work out why '
+      'it stays upright without glue.',
   'stepCount': 6,
   'subjectName': 'Science',
+  'learningUnitPreviewImage': 'luImages/divya-teacher-corner/mps_200x200.png',
   'Maturity': 'gold',
+  'resources': {'gold': 'lur_mps_gold'},
 };
 
 void main() {
@@ -25,15 +29,30 @@ void main() {
       expect(lu.maturity, 'gold');
     });
 
-    test('has no preview image, which is a state the UI must handle', () {
-      // seed.js never writes learningUnitPreviewImage. Whether that is
-      // deliberate or an omission is a question for the brief, but either way
-      // null here must not become a broken image or a crash.
+    test('carries a preview PATH and its maturity resource', () {
       final lu = LearningUnit.fromMap('lu_mps', seededLearningUnit());
+
+      expect(
+        lu.previewImagePath,
+        'luImages/divya-teacher-corner/mps_200x200.png',
+      );
+      // Emphatically a path, not a resolved URL.
+      expect(lu.previewImagePath, isNot(startsWith('http')));
+      expect(lu.resourceIdForMaturity, 'lur_mps_gold');
+      expect(lu.longDescription, isNotNull);
+    });
+
+    test('a document without those fields still parses', () {
+      // Older units predate them, and a missing preview must degrade to a
+      // placeholder rather than a broken image or a crash.
+      final lu = LearningUnit.fromMap('lu_old', {
+        'learningUnitDisplayName': 'Older Unit',
+      });
 
       expect(lu.previewImagePath, isNull);
       expect(lu.resources, isEmpty);
       expect(lu.resourceIdForMaturity, isNull);
+      expect(lu.longDescription, isNull);
     });
   });
 

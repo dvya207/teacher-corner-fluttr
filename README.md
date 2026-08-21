@@ -113,6 +113,23 @@ includes awkward data (a classroom whose `grade` is the string `"ET"`, one
 `workflowIds` as a list and one as a map) because the real data is like that and
 your parsing needs to survive it.
 
+It also uploads the image fixtures the learning unit screen needs, because a
+Storage path in Firestore with no object behind it is not a fixture, it is a
+broken link that looks like an app bug. Those objects are namespaced by database
+id (`luImages/<your-db>/…`), since every developer's named database shares one
+Storage bucket in this project and an un-namespaced fixture would overwrite
+everyone else's. Add `--skip-storage` to seed Firestore only, for instance if
+you do not have write access to the bucket.
+
+To see exactly what the seed would write, with no credentials and no network:
+
+```bash
+node tools/seed_dryrun.js
+```
+
+Its last section lists any Storage path referenced in Firestore that has no
+object, which is the mistake worth catching.
+
 ---
 
 ## What is in here
