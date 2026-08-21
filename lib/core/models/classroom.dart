@@ -49,7 +49,8 @@ class ClassroomProgramme {
       docId: docId,
       field: 'programmes',
     )) {
-      final id = entry.key ??
+      final id =
+          entry.key ??
           SafeParse.asRefString(
             entry.value['programmeId'],
             collection: collection,
@@ -57,16 +58,18 @@ class ClassroomProgramme {
             field: 'programmes.programmeId',
           );
       if (id == null || id.isEmpty) continue;
-      out.add(ClassroomProgramme(
-        programmeId: id,
-        displayName: SafeParse.asDisplayString(entry.value['displayName']),
-        workflows: _workflowsFrom(
-          entry.value['workflowIds'],
-          collection: collection,
-          docId: docId,
+      out.add(
+        ClassroomProgramme(
           programmeId: id,
+          displayName: SafeParse.asDisplayString(entry.value['displayName']),
+          workflows: _workflowsFrom(
+            entry.value['workflowIds'],
+            collection: collection,
+            docId: docId,
+            programmeId: id,
+          ),
         ),
-      ));
+      );
     }
     return out;
   }
@@ -167,8 +170,9 @@ class Classroom {
 
   /// Every learning unit this classroom is doing, across all its programmes,
   /// with the workflow each one runs here.
-  List<WorkflowBinding> get allWorkflows =>
-      [for (final p in programmes) ...p.workflows];
+  List<WorkflowBinding> get allWorkflows => [
+    for (final p in programmes) ...p.workflows,
+  ];
 
   /// The workflow this classroom uses for [learningUnitId], or null when the
   /// classroom is not running that unit at all.
@@ -182,7 +186,8 @@ class Classroom {
   factory Classroom.fromMap(String classroomId, Map<String, dynamic> data) {
     return Classroom(
       classroomId: classroomId,
-      classroomName: SafeParse.asDisplayString(data['classroomName']) ??
+      classroomName:
+          SafeParse.asDisplayString(data['classroomName']) ??
           // "name" on older documents, per SCHEMA.md.
           SafeParse.asDisplayString(data['name']),
       stemClubName: SafeParse.asDisplayString(data['stemClubName']),

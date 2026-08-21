@@ -4,13 +4,13 @@ import 'package:tc_starter/core/models/learning_unit.dart';
 /// `LearningUnits/lu_magnetic_pen_stand` as seeded. Note what seed.js does NOT
 /// write: learningUnitPreviewImage, longDescription or resources.
 Map<String, dynamic> seededLearningUnit() => {
-      'learningUnitDisplayName': 'Magnetic Pen Stand',
-      'type': 'TACtivity',
-      'shortDescription': 'Build a pen stand that holds itself up with magnets.',
-      'stepCount': 6,
-      'subjectName': 'Science',
-      'Maturity': 'gold',
-    };
+  'learningUnitDisplayName': 'Magnetic Pen Stand',
+  'type': 'TACtivity',
+  'shortDescription': 'Build a pen stand that holds itself up with magnets.',
+  'stepCount': 6,
+  'subjectName': 'Science',
+  'Maturity': 'gold',
+};
 
 void main() {
   group('the seeded document', () {
@@ -83,9 +83,7 @@ void main() {
 
     test('a non-String path is rejected rather than coerced', () {
       // A path built from a number would point at a file that does not exist.
-      final lu = LearningUnit.fromMap('lu_x', {
-        'learningUnitPreviewImage': 42,
-      });
+      final lu = LearningUnit.fromMap('lu_x', {'learningUnitPreviewImage': 42});
       expect(lu.previewImagePath, isNull);
     });
   });
@@ -131,8 +129,10 @@ void main() {
     test('stepCount that is not a number degrades to null, not 0', () {
       // "0 steps" would be a claim about the activity; null is a claim about
       // the document.
-      expect(LearningUnit.fromMap('lu_x', {'stepCount': 'six'}).stepCount,
-          isNull);
+      expect(
+        LearningUnit.fromMap('lu_x', {'stepCount': 'six'}).stepCount,
+        isNull,
+      );
     });
 
     test('an empty document produces a usable object', () {

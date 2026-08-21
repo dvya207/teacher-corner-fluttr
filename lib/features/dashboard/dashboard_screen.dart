@@ -43,9 +43,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: switch (dashboard.status) {
         DashboardStatus.loading => TcLoading(message: 'common.loading'.tr()),
         DashboardStatus.error => _ErrorState(
-            messageKey: dashboard.errorKey ?? 'dashboard.error_generic',
-            onRetry: dashboard.retry,
-          ),
+          messageKey: dashboard.errorKey ?? 'dashboard.error_generic',
+          onRetry: dashboard.retry,
+        ),
         DashboardStatus.loaded => _LoadedState(dashboard: dashboard),
       },
     );

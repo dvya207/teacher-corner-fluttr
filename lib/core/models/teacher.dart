@@ -81,9 +81,9 @@ class Teacher {
   /// several of a teacher's classrooms, and "3 programmes" meaning the same
   /// programme counted three times would be a lie on the dashboard.
   int get programmeCount => {
-        for (final classroom in classrooms)
-          for (final programme in classroom.programmes) programme.programmeId,
-      }.length;
+    for (final classroom in classrooms)
+      for (final programme in classroom.programmes) programme.programmeId,
+  }.length;
 }
 
 /// The nested `teacherMeta` map. A map, not a subcollection.
@@ -105,13 +105,13 @@ class TeacherMeta {
   final String? designation;
 
   factory TeacherMeta.fromMap(Map<String, dynamic> map) => TeacherMeta(
-        firstName: SafeParse.asDisplayString(map['firstName']),
-        lastName: SafeParse.asDisplayString(map['lastName']),
-        phoneNumber: SafeParse.asDisplayString(map['phoneNumber']),
-        email: SafeParse.asDisplayString(map['email']),
-        institutionName: SafeParse.asDisplayString(map['institutionName']),
-        designation: SafeParse.asDisplayString(map['designation']),
-      );
+    firstName: SafeParse.asDisplayString(map['firstName']),
+    lastName: SafeParse.asDisplayString(map['lastName']),
+    phoneNumber: SafeParse.asDisplayString(map['phoneNumber']),
+    email: SafeParse.asDisplayString(map['email']),
+    institutionName: SafeParse.asDisplayString(map['institutionName']),
+    designation: SafeParse.asDisplayString(map['designation']),
+  );
 
   /// Null rather than a stray space when one half of the pair is missing.
   String? get fullName {

@@ -26,10 +26,12 @@ class ClassroomSearch {
       ..removeWhere((t) => t.isEmpty);
     if (tokens.isEmpty) return List.unmodifiable(classrooms);
 
-    return List.unmodifiable(classrooms.where((classroom) {
-      final haystack = _haystack(classroom);
-      return tokens.every(haystack.contains);
-    }));
+    return List.unmodifiable(
+      classrooms.where((classroom) {
+        final haystack = _haystack(classroom);
+        return tokens.every(haystack.contains);
+      }),
+    );
   }
 
   static String _haystack(ClassroomListItem classroom) {

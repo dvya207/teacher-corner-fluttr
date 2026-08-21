@@ -20,8 +20,8 @@ class DashboardProvider extends ChangeNotifier {
   DashboardProvider({
     required FirestoreService firestore,
     Duration timeout = kDashboardLoadTimeout,
-  })  : _firestore = firestore,
-        _timeout = timeout;
+  }) : _firestore = firestore,
+       _timeout = timeout;
 
   final FirestoreService _firestore;
 
@@ -75,9 +75,7 @@ class DashboardProvider extends ChangeNotifier {
     _notify();
 
     try {
-      _teacher = await _firestore
-          .fetchTeacher(_uid!)
-          .timeout(_timeout);
+      _teacher = await _firestore.fetchTeacher(_uid!).timeout(_timeout);
       _status = DashboardStatus.loaded;
     } on TimeoutException {
       _status = DashboardStatus.error;

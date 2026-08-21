@@ -50,15 +50,17 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
       backgroundColor: AppColors.bg,
       appBar: TcAppBar(title: 'classrooms.title'.tr()),
       body: switch (classrooms.status) {
-        ClassroomListStatus.loading => TcLoading(message: 'common.loading'.tr()),
+        ClassroomListStatus.loading => TcLoading(
+          message: 'common.loading'.tr(),
+        ),
         ClassroomListStatus.error => _ErrorState(
-            messageKey: classrooms.errorKey ?? 'classrooms.error_generic',
-            onRetry: classrooms.retry,
-          ),
+          messageKey: classrooms.errorKey ?? 'classrooms.error_generic',
+          onRetry: classrooms.retry,
+        ),
         ClassroomListStatus.loaded => _LoadedState(
-            provider: classrooms,
-            searchController: _searchController,
-          ),
+          provider: classrooms,
+          searchController: _searchController,
+        ),
       },
     );
   }
@@ -93,10 +95,7 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _LoadedState extends StatelessWidget {
-  const _LoadedState({
-    required this.provider,
-    required this.searchController,
-  });
+  const _LoadedState({required this.provider, required this.searchController});
 
   final ClassroomProvider provider;
   final TextEditingController searchController;
@@ -154,9 +153,8 @@ class _LoadedState extends StatelessWidget {
                     final classroom = visible[index];
                     return ClassroomCard(
                       classroom: classroom,
-                      onTap: () => context.go(
-                        '/classrooms/${classroom.classroomId}',
-                      ),
+                      onTap: () =>
+                          context.go('/classrooms/${classroom.classroomId}'),
                     );
                   },
                 ),

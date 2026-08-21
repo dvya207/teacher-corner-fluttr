@@ -8,14 +8,13 @@ ClassroomListItem item({
   String? institution,
   String? gradeSection,
   List<String> programmes = const [],
-}) =>
-    ClassroomListItem(
-      classroomId: id,
-      displayName: name,
-      institutionName: institution,
-      gradeSectionLabel: gradeSection,
-      programmeLabels: programmes,
-    );
+}) => ClassroomListItem(
+  classroomId: id,
+  displayName: name,
+  institutionName: institution,
+  gradeSectionLabel: gradeSection,
+  programmeLabels: programmes,
+);
 
 /// The two seeded classrooms, as the list would assemble them.
 final seeded = [
@@ -41,8 +40,10 @@ void main() {
       // school far more often than by class name, so this has to match.
       final results = ClassroomSearch.filter(seeded, 'oak');
 
-      expect(results.map((c) => c.classroomId),
-          containsAll(['cls_oak_7a', 'cls_oak_et']));
+      expect(
+        results.map((c) => c.classroomId),
+        containsAll(['cls_oak_7a', 'cls_oak_et']),
+      );
     });
 
     test('a name-only filter would have missed it', () {
@@ -52,20 +53,26 @@ void main() {
           .toList();
 
       expect(nameOnly.map((c) => c.classroomId), ['cls_oak_et']);
-      expect(ClassroomSearch.filter(seeded, 'oak').length,
-          greaterThan(nameOnly.length));
+      expect(
+        ClassroomSearch.filter(seeded, 'oak').length,
+        greaterThan(nameOnly.length),
+      );
     });
   });
 
   group('what else is searchable', () {
     test('the classroom name', () {
-      expect(ClassroomSearch.filter(seeded, '7 A').single.classroomId,
-          'cls_oak_7a');
+      expect(
+        ClassroomSearch.filter(seeded, '7 A').single.classroomId,
+        'cls_oak_7a',
+      );
     });
 
     test('the grade label', () {
-      expect(ClassroomSearch.filter(seeded, 'grade 7').single.classroomId,
-          'cls_oak_7a');
+      expect(
+        ClassroomSearch.filter(seeded, 'grade 7').single.classroomId,
+        'cls_oak_7a',
+      );
     });
 
     test('the programme', () {
@@ -94,13 +101,17 @@ void main() {
     });
 
     test('token order does not matter', () {
-      expect(ClassroomSearch.filter(seeded, '7 oak').single.classroomId,
-          ClassroomSearch.filter(seeded, 'oak 7').single.classroomId);
+      expect(
+        ClassroomSearch.filter(seeded, '7 oak').single.classroomId,
+        ClassroomSearch.filter(seeded, 'oak 7').single.classroomId,
+      );
     });
 
     test('extra internal whitespace is tolerated', () {
-      expect(ClassroomSearch.filter(seeded, '  oak    7 ').single.classroomId,
-          'cls_oak_7a');
+      expect(
+        ClassroomSearch.filter(seeded, '  oak    7 ').single.classroomId,
+        'cls_oak_7a',
+      );
     });
 
     test('no match returns empty rather than falling back to everything', () {
@@ -119,8 +130,10 @@ void main() {
     test('the result list cannot be mutated by the caller', () {
       // The provider hands this straight to a ListView; an accidental in-place
       // sort would silently reorder the source of truth.
-      expect(() => ClassroomSearch.filter(seeded, '').add(seeded.first),
-          throwsUnsupportedError);
+      expect(
+        () => ClassroomSearch.filter(seeded, '').add(seeded.first),
+        throwsUnsupportedError,
+      );
     });
   });
 }

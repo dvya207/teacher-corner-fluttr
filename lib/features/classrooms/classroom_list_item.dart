@@ -64,9 +64,14 @@ class ClassroomListItem {
       // displayName on either model already falls back to the id, so it is
       // never blank; pick the authoritative one when we have it.
       displayName: full?.displayName ?? ref.displayName,
-      gradeSectionLabel:
-          firstNonEmpty(full?.gradeSectionLabel, ref.gradeSectionLabel),
-      institutionName: firstNonEmpty(full?.institutionName, ref.institutionName),
+      gradeSectionLabel: firstNonEmpty(
+        full?.gradeSectionLabel,
+        ref.gradeSectionLabel,
+      ),
+      institutionName: firstNonEmpty(
+        full?.institutionName,
+        ref.institutionName,
+      ),
       studentCounter: full?.studentCounter,
       programmeLabels: programmes,
       isStemClub: full?.isStemClub ?? ref.isStemClub,

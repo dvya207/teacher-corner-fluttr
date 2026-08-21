@@ -47,13 +47,12 @@ class FirestoreService {
   /// document has since been deleted, so "referenced but absent" is a state the
   /// caller has to handle rather than an impossibility.
   Future<Classroom?> fetchClassroom(String classroomId) async {
-    final snap =
-        await _db.collection(Classroom.collection).doc(classroomId).get();
+    final snap = await _db
+        .collection(Classroom.collection)
+        .doc(classroomId)
+        .get();
     if (!snap.exists) return null;
-    return Classroom.fromMap(
-      snap.id,
-      snap.data() ?? const <String, dynamic>{},
-    );
+    return Classroom.fromMap(snap.id, snap.data() ?? const <String, dynamic>{});
   }
 
   /// Fetches several classrooms concurrently, dropping the ones that do not
@@ -90,8 +89,10 @@ class FirestoreService {
   /// unit to its workflow, because that relationship does not exist: the same
   /// unit runs different workflows in different classrooms.
   Future<Workflow?> fetchWorkflow(String workflowId) async {
-    final snap =
-        await _db.collection(Workflow.collection).doc(workflowId).get();
+    final snap = await _db
+        .collection(Workflow.collection)
+        .doc(workflowId)
+        .get();
     if (!snap.exists) return null;
     return Workflow.fromMap(snap.id, snap.data() ?? const <String, dynamic>{});
   }

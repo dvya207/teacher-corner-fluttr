@@ -35,7 +35,8 @@ class ProgrammeRef {
       docId: docId,
       field: 'programmes',
     )) {
-      final id = entry.key ??
+      final id =
+          entry.key ??
           SafeParse.asRefString(
             entry.value['programmeId'],
             collection: collection,
@@ -45,10 +46,12 @@ class ProgrammeRef {
       // No id by either route means nothing can link to it or open it. Drop it
       // rather than carry an unreachable row.
       if (id == null || id.isEmpty) continue;
-      out.add(ProgrammeRef(
-        programmeId: id,
-        displayName: SafeParse.asDisplayString(entry.value['displayName']),
-      ));
+      out.add(
+        ProgrammeRef(
+          programmeId: id,
+          displayName: SafeParse.asDisplayString(entry.value['displayName']),
+        ),
+      );
     }
     return out;
   }

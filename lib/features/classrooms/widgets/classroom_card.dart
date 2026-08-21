@@ -11,11 +11,7 @@ import '../classroom_list_item.dart';
 
 /// One classroom row: name, grade/section, institution, student count.
 class ClassroomCard extends StatelessWidget {
-  const ClassroomCard({
-    super.key,
-    required this.classroom,
-    this.onTap,
-  });
+  const ClassroomCard({super.key, required this.classroom, this.onTap});
 
   final ClassroomListItem classroom;
   final VoidCallback? onTap;
@@ -71,8 +67,9 @@ class ClassroomCard extends StatelessWidget {
                     if (classroom.studentCounter != null) ...[
                       SizedBox(height: 2.h),
                       Text(
-                        'classrooms.students_count'
-                            .tr(args: ['${classroom.studentCounter}']),
+                        'classrooms.students_count'.tr(
+                          args: ['${classroom.studentCounter}'],
+                        ),
                         style: AppTypography.tiny,
                       ),
                     ],
@@ -96,8 +93,11 @@ class ClassroomCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded,
-                  size: 22.r, color: AppColors.textTertiary),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 22.r,
+                color: AppColors.textTertiary,
+              ),
             ],
           ),
         ),

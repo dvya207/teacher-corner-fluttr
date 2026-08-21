@@ -18,8 +18,8 @@ class ClassroomProvider extends ChangeNotifier {
   ClassroomProvider({
     required FirestoreService firestore,
     Duration timeout = kClassroomLoadTimeout,
-  })  : _firestore = firestore,
-        _timeout = timeout;
+  }) : _firestore = firestore,
+       _timeout = timeout;
 
   final FirestoreService _firestore;
   final Duration _timeout;

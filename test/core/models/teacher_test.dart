@@ -5,44 +5,44 @@ import 'package:tc_starter/core/utils/parse_diagnostics.dart';
 /// The teacher document exactly as `tools/seed.js` writes it, including the
 /// deliberately awkward second classroom.
 Map<String, dynamic> seededTeacher() => {
-      'name': 'Intern Teacher',
-      'teacherMeta': {
-        'firstName': 'Intern',
-        'lastName': 'Teacher',
-        'phoneNumber': '+919999900000',
-        'institutionName': 'Test School Oak',
-        'designation': 'Teacher',
-      },
-      'classrooms': {
-        'cls_oak_7a': {
-          'classroomId': 'cls_oak_7a',
-          'classroomName': '7 A',
-          'type': 'CLASSROOM',
-          'grade': 7,
-          'section': 'A',
-          'institutionName': 'Test School Oak',
-          'programmes': {
-            'prog_tip_2026': {
-              'programmeId': 'prog_tip_2026',
-              'displayName': 'TIP 2026',
-            },
-          },
-        },
-        'cls_oak_et': {
-          'classroomId': 'cls_oak_et',
-          'stemClubName': 'Oak ET Club',
-          'type': 'STEM-CLUB',
-          'grade': 'ET',
-          'institutionName': 'Test School Oak',
-          'programmes': {
-            'prog_tip_2026': {
-              'programmeId': 'prog_tip_2026',
-              'displayName': 'TIP 2026',
-            },
-          },
+  'name': 'Intern Teacher',
+  'teacherMeta': {
+    'firstName': 'Intern',
+    'lastName': 'Teacher',
+    'phoneNumber': '+919999900000',
+    'institutionName': 'Test School Oak',
+    'designation': 'Teacher',
+  },
+  'classrooms': {
+    'cls_oak_7a': {
+      'classroomId': 'cls_oak_7a',
+      'classroomName': '7 A',
+      'type': 'CLASSROOM',
+      'grade': 7,
+      'section': 'A',
+      'institutionName': 'Test School Oak',
+      'programmes': {
+        'prog_tip_2026': {
+          'programmeId': 'prog_tip_2026',
+          'displayName': 'TIP 2026',
         },
       },
-    };
+    },
+    'cls_oak_et': {
+      'classroomId': 'cls_oak_et',
+      'stemClubName': 'Oak ET Club',
+      'type': 'STEM-CLUB',
+      'grade': 'ET',
+      'institutionName': 'Test School Oak',
+      'programmes': {
+        'prog_tip_2026': {
+          'programmeId': 'prog_tip_2026',
+          'displayName': 'TIP 2026',
+        },
+      },
+    },
+  },
+};
 
 void main() {
   setUp(() {

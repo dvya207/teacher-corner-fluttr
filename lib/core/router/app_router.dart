@@ -78,10 +78,7 @@ class AppRouter {
           path: splash,
           builder: (context, state) => const SplashScreen(),
         ),
-        GoRoute(
-          path: login,
-          builder: (context, state) => const LoginScreen(),
-        ),
+        GoRoute(path: login, builder: (context, state) => const LoginScreen()),
 
         // ── The bottom-nav shell. Children keep their own navigation stack. ──
         ShellRoute(

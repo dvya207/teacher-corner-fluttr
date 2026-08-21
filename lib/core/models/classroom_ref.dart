@@ -71,7 +71,8 @@ class ClassroomRef {
   }) {
     return ClassroomRef(
       classroomId: classroomId,
-      classroomName: SafeParse.asDisplayString(data['classroomName']) ??
+      classroomName:
+          SafeParse.asDisplayString(data['classroomName']) ??
           // "name" on older documents, per SCHEMA.md.
           SafeParse.asDisplayString(data['name']),
       stemClubName: SafeParse.asDisplayString(data['stemClubName']),
@@ -107,7 +108,8 @@ class ClassroomRef {
       docId: docId,
       field: 'classrooms',
     )) {
-      final id = entry.key ??
+      final id =
+          entry.key ??
           SafeParse.asRefString(
             entry.value['classroomId'],
             collection: collection,

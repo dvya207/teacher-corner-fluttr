@@ -8,40 +8,40 @@ const _programme = 'prog_tip_2026';
 
 /// `Classrooms/cls_oak_7a` as seeded: workflowIds in LIST form.
 Map<String, dynamic> seededClassroom() => {
-      'classroomName': '7 A',
-      'type': 'CLASSROOM',
-      'grade': 7,
-      'section': 'A',
-      'board': 'CBSE',
-      'institutionName': 'Test School Oak',
-      'studentCounter': 32,
-      'programmes': {
-        _programme: {
-          'displayName': 'TIP 2026',
-          'workflowIds': [
-            {'learningUnitId': _lu, 'workflowId': _workflow},
-          ],
-        },
-      },
-    };
+  'classroomName': '7 A',
+  'type': 'CLASSROOM',
+  'grade': 7,
+  'section': 'A',
+  'board': 'CBSE',
+  'institutionName': 'Test School Oak',
+  'studentCounter': 32,
+  'programmes': {
+    _programme: {
+      'displayName': 'TIP 2026',
+      'workflowIds': [
+        {'learningUnitId': _lu, 'workflowId': _workflow},
+      ],
+    },
+  },
+};
 
 /// `Classrooms/cls_oak_et` as seeded: grade is the String "ET", the name comes
 /// from stemClubName, and workflowIds is in MAP form.
 Map<String, dynamic> seededStemClub() => {
-      'stemClubName': 'Oak ET Club',
-      'type': 'STEM-CLUB',
-      'grade': 'ET',
-      'institutionName': 'Test School Oak',
-      'studentCounter': 12,
-      'programmes': {
-        _programme: {
-          'displayName': 'TIP 2026',
-          'workflowIds': {
-            '0': {'learningUnitId': _lu, 'workflowId': _workflow},
-          },
-        },
+  'stemClubName': 'Oak ET Club',
+  'type': 'STEM-CLUB',
+  'grade': 'ET',
+  'institutionName': 'Test School Oak',
+  'studentCounter': 12,
+  'programmes': {
+    _programme: {
+      'displayName': 'TIP 2026',
+      'workflowIds': {
+        '0': {'learningUnitId': _lu, 'workflowId': _workflow},
       },
-    };
+    },
+  },
+};
 
 void main() {
   setUp(() {
@@ -110,54 +110,59 @@ void main() {
   });
 
   group('the workflow binding lives on the classroom', () {
-    test('the same learning unit maps to a different workflow per classroom',
-        () {
-      // This is the most counter-intuitive thing in the data model, so it gets
-      // an explicit test rather than a comment.
-      final a = Classroom.fromMap('cls_a', {
-        'programmes': {
-          _programme: {
-            'workflowIds': [
-              {'learningUnitId': _lu, 'workflowId': 'wf_version_one'},
-            ],
+    test(
+      'the same learning unit maps to a different workflow per classroom',
+      () {
+        // This is the most counter-intuitive thing in the data model, so it gets
+        // an explicit test rather than a comment.
+        final a = Classroom.fromMap('cls_a', {
+          'programmes': {
+            _programme: {
+              'workflowIds': [
+                {'learningUnitId': _lu, 'workflowId': 'wf_version_one'},
+              ],
+            },
           },
-        },
-      });
-      final b = Classroom.fromMap('cls_b', {
-        'programmes': {
-          _programme: {
-            'workflowIds': [
-              {'learningUnitId': _lu, 'workflowId': 'wf_version_two'},
-            ],
+        });
+        final b = Classroom.fromMap('cls_b', {
+          'programmes': {
+            _programme: {
+              'workflowIds': [
+                {'learningUnitId': _lu, 'workflowId': 'wf_version_two'},
+              ],
+            },
           },
-        },
-      });
+        });
 
-      expect(a.workflowIdFor(_lu), 'wf_version_one');
-      expect(b.workflowIdFor(_lu), 'wf_version_two');
-    });
+        expect(a.workflowIdFor(_lu), 'wf_version_one');
+        expect(b.workflowIdFor(_lu), 'wf_version_two');
+      },
+    );
 
     test('returns null for a learning unit this classroom is not running', () {
       final classroom = Classroom.fromMap('cls_oak_7a', seededClassroom());
       expect(classroom.workflowIdFor('lu_not_running_here'), isNull);
     });
 
-    test('a binding missing its workflowId is dropped, never half-resolved', () {
-      final classroom = Classroom.fromMap('cls_a', {
-        'programmes': {
-          _programme: {
-            'workflowIds': [
-              {'learningUnitId': _lu},
-              {'learningUnitId': 'lu_ok', 'workflowId': 'wf_ok'},
-            ],
+    test(
+      'a binding missing its workflowId is dropped, never half-resolved',
+      () {
+        final classroom = Classroom.fromMap('cls_a', {
+          'programmes': {
+            _programme: {
+              'workflowIds': [
+                {'learningUnitId': _lu},
+                {'learningUnitId': 'lu_ok', 'workflowId': 'wf_ok'},
+              ],
+            },
           },
-        },
-      });
+        });
 
-      expect(classroom.allWorkflows, hasLength(1));
-      expect(classroom.workflowIdFor(_lu), isNull);
-      expect(classroom.workflowIdFor('lu_ok'), 'wf_ok');
-    });
+        expect(classroom.allWorkflows, hasLength(1));
+        expect(classroom.workflowIdFor(_lu), isNull);
+        expect(classroom.workflowIdFor('lu_ok'), 'wf_ok');
+      },
+    );
 
     test('map-form keys order numerically, so "10" follows "9"', () {
       final classroom = Classroom.fromMap('cls_a', {
@@ -172,10 +177,11 @@ void main() {
         },
       });
 
-      expect(
-        classroom.allWorkflows.map((w) => w.learningUnitId),
-        ['lu_zero', 'lu_nine', 'lu_ten'],
-      );
+      expect(classroom.allWorkflows.map((w) => w.learningUnitId), [
+        'lu_zero',
+        'lu_nine',
+        'lu_ten',
+      ]);
     });
   });
 
@@ -222,9 +228,7 @@ void main() {
 
     test('programme label falls back to the id, never to blank', () {
       final classroom = Classroom.fromMap('cls_a', {
-        'programmes': {
-          'prog_no_display_name': <String, dynamic>{},
-        },
+        'programmes': {'prog_no_display_name': <String, dynamic>{}},
       });
       expect(classroom.programmes.single.label, 'prog_no_display_name');
     });

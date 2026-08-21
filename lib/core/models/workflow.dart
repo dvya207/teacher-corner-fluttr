@@ -100,7 +100,8 @@ class WorkflowStep {
     required String fallbackId,
     String? docId,
   }) {
-    final id = SafeParse.asRefString(
+    final id =
+        SafeParse.asRefString(
           data['workflowStepId'],
           collection: Workflow.collection,
           docId: docId,
@@ -189,13 +190,15 @@ class Workflow {
       field: 'steps',
     );
     for (var i = 0; i < entries.length; i++) {
-      parsed.add(WorkflowStep.fromMap(
-        entries[i].value,
-        // Only used when the document omits workflowStepId; index at least
-        // keeps the keys distinct.
-        fallbackId: entries[i].key ?? 'step_$i',
-        docId: workflowId,
-      ));
+      parsed.add(
+        WorkflowStep.fromMap(
+          entries[i].value,
+          // Only used when the document omits workflowStepId; index at least
+          // keeps the keys distinct.
+          fallbackId: entries[i].key ?? 'step_$i',
+          docId: workflowId,
+        ),
+      );
     }
 
     // Sorted HERE, once, at the boundary, rather than in the widget that draws

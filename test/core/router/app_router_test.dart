@@ -105,8 +105,9 @@ void main() {
     });
 
     test('leaves every real destination alone', () {
-      for (final location in everywhere
-          .where((l) => l != '/splash' && l != '/login')) {
+      for (final location in everywhere.where(
+        (l) => l != '/splash' && l != '/login',
+      )) {
         expect(
           AppRouter.resolveRedirect(
             location: location,

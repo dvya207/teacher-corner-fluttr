@@ -114,17 +114,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       TextButton(
                         onPressed: auth.isBusy ? null : auth.changeNumber,
-                        child: Text('auth.change_number'.tr(),
-                            style: AppTypography.caption
-                                .copyWith(color: AppColors.skyBlue)),
+                        child: Text(
+                          'auth.change_number'.tr(),
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.skyBlue,
+                          ),
+                        ),
                       ),
                       TextButton(
                         onPressed: auth.isBusy
                             ? null
                             : () => auth.sendOtp(_phoneController.text.trim()),
-                        child: Text('auth.resend_otp'.tr(),
-                            style: AppTypography.caption
-                                .copyWith(color: AppColors.skyBlue)),
+                        child: Text(
+                          'auth.resend_otp'.tr(),
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.skyBlue,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -149,9 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ],
       prefixIcon: Padding(
         padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacing12),
-        child: Center(
-          child: Text(kDialCode, style: AppTypography.inputText),
-        ),
+        child: Center(child: Text(kDialCode, style: AppTypography.inputText)),
       ),
       validator: (value) => kIndianMobile.hasMatch((value ?? '').trim())
           ? null
@@ -177,10 +181,9 @@ class _LoginScreenState extends State<LoginScreen> {
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(_codeLength),
           ],
-          validator: (value) =>
-              (value ?? '').trim().length == _codeLength
-                  ? null
-                  : 'auth.otp_invalid'.tr(),
+          validator: (value) => (value ?? '').trim().length == _codeLength
+              ? null
+              : 'auth.otp_invalid'.tr(),
         ),
       ],
     );

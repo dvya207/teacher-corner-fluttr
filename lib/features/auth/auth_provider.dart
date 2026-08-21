@@ -28,10 +28,17 @@ const Duration kVerificationTimeout = Duration(seconds: 90);
 /// us there.
 class AuthProvider extends ChangeNotifier {
   AuthProvider({FirebaseAuth? auth, FirestoreService? firestore})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirestoreService();
+    : _injectedAuth = auth,
+      _firestore = firestore ?? FirestoreService();
 
-  final FirebaseAuth _auth;
+  final FirebaseAuth? _injectedAuth;
+
+  /// Resolved lazily, on first use. `FirebaseAuth.instance` calls
+  /// `Firebase.app()`, which throws in a widget test where Firebase was never
+  /// initialised. A stub that only reports a uid must be constructible without
+  /// Firebase existing at all.
+  late final FirebaseAuth _auth = _injectedAuth ?? FirebaseAuth.instance;
+
   final FirestoreService _firestore;
 
   StreamSubscription<User?>? _authSub;
@@ -278,8 +285,8 @@ class AuthProvider extends ChangeNotifier {
     return switch (e.code) {
       'invalid-phone-number' => 'auth.error_invalid_phone',
       'invalid-verification-code' => 'auth.error_invalid_code',
-      'invalid-verification-id' || 'session-expired' =>
-        'auth.error_code_expired',
+      'invalid-verification-id' ||
+      'session-expired' => 'auth.error_code_expired',
       'too-many-requests' => 'auth.error_too_many_requests',
       'network-request-failed' => 'auth.error_network',
       'quota-exceeded' => 'auth.error_quota',

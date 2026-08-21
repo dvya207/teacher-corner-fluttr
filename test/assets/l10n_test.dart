@@ -24,9 +24,7 @@ Map<String, String> _flatten(Map<String, dynamic> json, [String prefix = '']) {
 Map<String, String> _load(String locale) {
   final file = File('assets/l10n/$locale.json');
   expect(file.existsSync(), isTrue, reason: '${file.path} is missing');
-  return _flatten(
-    jsonDecode(file.readAsStringSync()) as Map<String, dynamic>,
-  );
+  return _flatten(jsonDecode(file.readAsStringSync()) as Map<String, dynamic>);
 }
 
 void main() {
@@ -40,8 +38,11 @@ void main() {
 
   test('en carries every string, and there are some', () {
     expect(en, isNotEmpty);
-    expect(en.values.any((v) => v.trim().isEmpty), isFalse,
-        reason: 'an empty string renders as a blank line on screen');
+    expect(
+      en.values.any((v) => v.trim().isEmpty),
+      isFalse,
+      reason: 'an empty string renders as a blank line on screen',
+    );
   });
 
   test('hi has no orphan keys that en does not define', () {
@@ -71,8 +72,11 @@ void main() {
       if (translated == null) continue;
       final enSlots = '{}'.allMatches(entry.value).length;
       final hiSlots = '{}'.allMatches(translated).length;
-      expect(hiSlots, enSlots,
-          reason: '${entry.key}: en has $enSlots placeholders, hi has $hiSlots');
+      expect(
+        hiSlots,
+        enSlots,
+        reason: '${entry.key}: en has $enSlots placeholders, hi has $hiSlots',
+      );
     }
   });
 
@@ -82,8 +86,11 @@ void main() {
       r'(\+91\d{10})|(AIza[\w-]{10,})|(sk_[A-Za-z0-9]{10,})',
     );
     for (final entry in {...en, ...hi}.entries) {
-      expect(suspicious.hasMatch(entry.value), isFalse,
-          reason: '${entry.key} contains something that should not ship');
+      expect(
+        suspicious.hasMatch(entry.value),
+        isFalse,
+        reason: '${entry.key} contains something that should not ship',
+      );
     }
   });
 }

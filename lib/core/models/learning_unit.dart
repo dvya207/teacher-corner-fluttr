@@ -57,10 +57,14 @@ class LearningUnit {
     return resources[key];
   }
 
-  factory LearningUnit.fromMap(String learningUnitId, Map<String, dynamic> data) {
+  factory LearningUnit.fromMap(
+    String learningUnitId,
+    Map<String, dynamic> data,
+  ) {
     // SCHEMA.md gives three names for the same field, in this order of
     // preference, because three systems wrote this collection over the years.
-    final name = SafeParse.asDisplayString(data['learningUnitDisplayName']) ??
+    final name =
+        SafeParse.asDisplayString(data['learningUnitDisplayName']) ??
         SafeParse.asDisplayString(data['learningUnitName']) ??
         SafeParse.asDisplayString(data['name']);
 

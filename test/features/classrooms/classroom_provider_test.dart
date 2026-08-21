@@ -4,84 +4,51 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/classroom_ref.dart';
 import 'package:tc_starter/core/models/teacher.dart';
-import 'package:tc_starter/core/services/firestore_service.dart';
 import 'package:tc_starter/features/classrooms/classroom_list_item.dart';
 import 'package:tc_starter/features/classrooms/classroom_provider.dart';
 
-class _FakeFirestoreService extends FirestoreService {
-  _FakeFirestoreService({
-    this.teacher,
-    this.classrooms = const [],
-    this.throws,
-    this.gate,
-  });
-
-  final Teacher? teacher;
-  final List<Classroom> classrooms;
-  final Object? throws;
-  final Completer<void>? gate;
-
-  int teacherReads = 0;
-  int classroomReads = 0;
-
-  @override
-  Future<Teacher?> fetchTeacher(String uid) async {
-    teacherReads++;
-    if (gate != null) await gate!.future;
-    if (throws != null) throw throws!;
-    return teacher;
-  }
-
-  @override
-  Future<List<Classroom>> fetchClassrooms(Iterable<String> ids) async {
-    classroomReads++;
-    final wanted = ids.toSet();
-    return classrooms
-        .where((c) => wanted.contains(c.classroomId))
-        .toList();
-  }
-}
+import '../../support/fakes.dart';
 
 Teacher teacherWithBothSeededClassrooms() => Teacher.fromMap('uid_1', {
-      'classrooms': {
-        'cls_oak_7a': {
-          'classroomName': '7 A',
-          'type': 'CLASSROOM',
-          'grade': 7,
-          'section': 'A',
-          'institutionName': 'Test School Oak',
-          'programmes': {
-            'prog_tip_2026': {'displayName': 'TIP 2026'},
-          },
-        },
-        'cls_oak_et': {
-          'stemClubName': 'Oak ET Club',
-          'type': 'STEM-CLUB',
-          'grade': 'ET',
-          'institutionName': 'Test School Oak',
-          'programmes': {
-            'prog_tip_2026': {'displayName': 'TIP 2026'},
-          },
-        },
+  'classrooms': {
+    'cls_oak_7a': {
+      'classroomName': '7 A',
+      'type': 'CLASSROOM',
+      'grade': 7,
+      'section': 'A',
+      'institutionName': 'Test School Oak',
+      'programmes': {
+        'prog_tip_2026': {'displayName': 'TIP 2026'},
       },
-    });
+    },
+    'cls_oak_et': {
+      'stemClubName': 'Oak ET Club',
+      'type': 'STEM-CLUB',
+      'grade': 'ET',
+      'institutionName': 'Test School Oak',
+      'programmes': {
+        'prog_tip_2026': {'displayName': 'TIP 2026'},
+      },
+    },
+  },
+});
 
 List<Classroom> authoritativeClassrooms() => [
-      Classroom.fromMap('cls_oak_7a', {
-        'classroomName': '7 A',
-        'grade': 7,
-        'section': 'A',
-        'institutionName': 'Test School Oak',
-        'studentCounter': 32,
-      }),
-      Classroom.fromMap('cls_oak_et', {
-        'stemClubName': 'Oak ET Club',
-        'type': 'STEM-CLUB',
-        'grade': 'ET',
-        'institutionName': 'Test School Oak',
-        'studentCounter': 12,
-      }),
-    ];
+  Classroom.fromMap('cls_oak_7a', {
+    'classroomName': '7 A',
+    'grade': 7,
+    'section': 'A',
+    'institutionName': 'Test School Oak',
+    'studentCounter': 32,
+  }),
+  Classroom.fromMap('cls_oak_et', {
+    'stemClubName': 'Oak ET Club',
+    'type': 'STEM-CLUB',
+    'grade': 'ET',
+    'institutionName': 'Test School Oak',
+    'studentCounter': 12,
+  }),
+];
 
 void main() {
   group('merging the two descriptions of a classroom', () {
@@ -122,7 +89,7 @@ void main() {
   group('loading', () {
     test('builds one row per classroom, with counts', () async {
       final provider = ClassroomProvider(
-        firestore: _FakeFirestoreService(
+        firestore: FakeFirestoreService(
           teacher: teacherWithBothSeededClassrooms(),
           classrooms: authoritativeClassrooms(),
         ),
@@ -132,10 +99,7 @@ void main() {
 
       expect(provider.status, ClassroomListStatus.loaded);
       expect(provider.all, hasLength(2));
-      expect(
-        provider.all.map((c) => c.studentCounter),
-        containsAll([32, 12]),
-      );
+      expect(provider.all.map((c) => c.studentCounter), containsAll([32, 12]));
       // The ET club keeps its name and gains no fake grade.
       final club = provider.all.firstWhere((c) => c.isStemClub);
       expect(club.displayName, 'Oak ET Club');
@@ -143,7 +107,7 @@ void main() {
     });
 
     test('a teacher with no classrooms is empty, not an error', () async {
-      final fake = _FakeFirestoreService(teacher: Teacher.fromMap('uid_1', {}));
+      final fake = FakeFirestoreService(teacher: Teacher.fromMap('uid_1', {}));
       final provider = ClassroomProvider(firestore: fake);
 
       await provider.load('uid_1');
@@ -157,7 +121,7 @@ void main() {
 
     test('a thrown read becomes the error state', () async {
       final provider = ClassroomProvider(
-        firestore: _FakeFirestoreService(throws: StateError('boom')),
+        firestore: FakeFirestoreService(throws: StateError('boom')),
       );
 
       await provider.load('uid_1');
@@ -169,7 +133,7 @@ void main() {
     test('a read that never answers times out', () async {
       final gate = Completer<void>();
       final provider = ClassroomProvider(
-        firestore: _FakeFirestoreService(gate: gate),
+        firestore: FakeFirestoreService(gate: gate),
         timeout: const Duration(milliseconds: 20),
       );
 
@@ -184,7 +148,7 @@ void main() {
   group('searching', () {
     Future<ClassroomProvider> loaded() async {
       final provider = ClassroomProvider(
-        firestore: _FakeFirestoreService(
+        firestore: FakeFirestoreService(
           teacher: teacherWithBothSeededClassrooms(),
           classrooms: authoritativeClassrooms(),
         ),
@@ -194,7 +158,7 @@ void main() {
     }
 
     test('never touches the network', () async {
-      final fake = _FakeFirestoreService(
+      final fake = FakeFirestoreService(
         teacher: teacherWithBothSeededClassrooms(),
         classrooms: authoritativeClassrooms(),
       );
