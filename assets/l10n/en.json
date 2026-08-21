@@ -87,7 +87,9 @@
     "error_title": "Could not load your dashboard",
     "error_generic": "Something went wrong loading your dashboard.",
     "error_offline": "This is taking too long. Check your connection and try again.",
-    "no_profile": "You are signed in, but no teacher profile has been set up for this account yet."
+    "no_profile": "You are signed in, but no teacher profile has been set up for this account yet.",
+    "see_all": "See all",
+    "your_classrooms": "Your classrooms"
   },
   "classroom": {
     "stat_students": "Students",

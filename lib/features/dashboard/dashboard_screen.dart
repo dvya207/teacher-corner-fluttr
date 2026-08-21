@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -8,9 +9,14 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/tc_button.dart';
 import '../../core/widgets/tc_hero_header.dart';
 import '../../core/widgets/tc_hero_stat_tile.dart';
+import '../../core/widgets/tc_empty_state.dart';
 import '../../core/widgets/tc_loading.dart';
+import '../../core/widgets/tc_section_label.dart';
 import '../../core/widgets/tc_status_message.dart';
+import '../../core/models/classroom_ref.dart';
 import '../auth/auth_provider.dart';
+import '../classrooms/classroom_list_item.dart';
+import '../classrooms/widgets/classroom_card.dart';
 import 'dashboard_provider.dart';
 
 /// The teacher's name, their institution, and how much they are carrying.
@@ -121,13 +127,75 @@ class _LoadedState extends StatelessWidget {
                     type: TcMsgType.info,
                     message: 'dashboard.no_profile'.tr(),
                   )
-                : Text(
-                    'nav.classrooms'.tr(),
-                    style: AppTypography.sectionTitle,
+                : _ClassroomShortcuts(
+                    classrooms: teacher?.classrooms ?? const [],
                   ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The teacher's classrooms, straight from the document the dashboard already
+/// loaded.
+///
+/// No extra reads: the denormalised `classrooms` map on the teacher is exactly
+/// what the counts above are computed from. It carries no `studentCounter`,
+/// which is why these rows are built with `full: null` and the card omits that
+/// line rather than inventing a zero.
+class _ClassroomShortcuts extends StatelessWidget {
+  const _ClassroomShortcuts({required this.classrooms});
+
+  final List<ClassroomRef> classrooms;
+
+  /// A dashboard is a place to start from, not a list to browse. Past a few
+  /// rows the searchable Classrooms tab is the better tool, so the rest live
+  /// behind "See all".
+  static const int _maxRows = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    if (classrooms.isEmpty) {
+      return TcEmptyState(
+        icon: Icons.class_outlined,
+        title: 'classrooms.empty_title'.tr(),
+        subtitle: 'classrooms.empty_subtitle'.tr(),
+      );
+    }
+
+    final shown = classrooms.take(_maxRows).toList();
+    final hasMore = classrooms.length > _maxRows;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TcSectionLabel(
+          'dashboard.your_classrooms'.tr(),
+          trailing: hasMore
+              ? GestureDetector(
+                  onTap: () => context.go('/classrooms'),
+                  child: Text(
+                    'dashboard.see_all'.tr(),
+                    style: AppTypography.label
+                        .copyWith(color: AppColors.skyBlue),
+                  ),
+                )
+              : null,
+        ),
+        SizedBox(height: AppDimensions.spacing8),
+        for (final ref in shown) ...[
+          ClassroomCard(
+            // Reuses the list's own card, so a classroom looks the same
+            // wherever a teacher meets it.
+            classroom: ClassroomListItem.merge(ref: ref, full: null),
+            // `go`, not `push`: this lands inside the Classrooms branch of the
+            // shell, so the bottom nav follows the teacher there.
+            onTap: () => context.go('/classrooms/${ref.classroomId}'),
+          ),
+          SizedBox(height: AppDimensions.spacing12),
+        ],
+      ],
     );
   }
 }

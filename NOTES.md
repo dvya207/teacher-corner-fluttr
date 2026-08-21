@@ -104,10 +104,16 @@ but "No classrooms yet" renders enormous and the app bar logo shrinks to about
 not unilaterally capped the width scale; it needs a call on whether the tokens
 should clamp.
 
-**The dashboard has a visible hole.** It renders a "Classrooms" section heading
-with nothing beneath it, because Phase 2's dashboard is only name, institution
-and counts. It reads as unfinished rather than as scoped, and either the heading
-should go or the classroom list should come up onto the dashboard.
+**The dashboard had a visible hole, now filled.** It rendered a "Classrooms"
+section heading with nothing beneath it, because Phase 2's dashboard is only
+name, institution and counts. Rather than delete the heading I populated it: the
+teacher's classrooms come from the same denormalised map the counts are computed
+from, so the rows cost no extra reads. They reuse the classroom list's own card,
+built with `full: null`, which is why the student count line is absent rather
+than zero: `studentCounter` lives only on the authoritative document, which the
+dashboard deliberately does not read. Capped at three rows with "See all"
+appearing only when there are more, because a dashboard is a place to start from
+and past a few rows the searchable tab is the better tool.
 
 ## How to look at it without a device
 
