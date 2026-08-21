@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/login_screen.dart';
+import '../../features/classrooms/classroom_list_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/placeholder_screen.dart';
 import '../../features/profile/profile_screen.dart';
@@ -92,8 +93,7 @@ class AppRouter {
             ),
             GoRoute(
               path: '/classrooms',
-              builder: (context, state) =>
-                  const PlaceholderScreen(title: 'Classrooms'),
+              builder: (context, state) => const ClassroomListScreen(),
               routes: [
                 // Nested so the breadcrumb/back stack works: /classrooms/:id
                 GoRoute(

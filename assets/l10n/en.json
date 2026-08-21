@@ -43,7 +43,16 @@
   "classrooms": {
     "title": "My Classrooms",
     "search_hint": "Search classrooms…",
-    "students_count": "{} students"
+    "students_count": "{} students",
+    "stem_club": "STEM Club",
+    "empty_title": "No classrooms yet",
+    "empty_subtitle": "When a classroom is assigned to you, it will appear here.",
+    "no_results_title": "No classrooms match",
+    "no_results_subtitle": "Try a school name, a grade, or a programme.",
+    "error_title": "Could not load your classrooms",
+    "error_generic": "Something went wrong loading your classrooms.",
+    "error_offline": "This is taking too long. Check your connection and try again.",
+    "details_unavailable": "Details for this classroom could not be loaded."
   },
   "lu": {
     "steps": "Steps",
