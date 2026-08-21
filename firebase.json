@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "divya-teacher-corner",
+      "rules": "firestore.rules"
+    }
+  ]
+}

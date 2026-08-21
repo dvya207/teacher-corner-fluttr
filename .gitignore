@@ -16,3 +16,7 @@ ios/Runner/GoogleService-Info.plist
 android/key.properties
 *.jks
 *.keystore
+
+# Seed script deps — installed locally, never committed.
+tools/node_modules/
+tools/package-lock.json
