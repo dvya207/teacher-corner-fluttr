@@ -4,5 +4,24 @@
       "database": "divya-teacher-corner",
       "rules": "firestore.rules"
     }
-  ]
+  ],
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "helix-staging-india",
+          "appId": "1:446667097540:android:a99fefab1fd8b47b8bd091",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "helix-staging-india",
+          "configurations": {
+            "android": "1:446667097540:android:a99fefab1fd8b47b8bd091"
+          }
+        }
+      }
+    }
+  }
 }
