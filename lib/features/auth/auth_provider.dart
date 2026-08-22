@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
@@ -19,25 +20,48 @@ const String kDialCode = '+91';
 /// thing from the server a second later.
 final RegExp kIndianMobile = RegExp(r'^[6-9]\d{9}$');
 
-/// How long to wait for `verifyPhoneNumber` to call one of its callbacks before
-/// giving up. A teacher on school wifi mid-class needs an error message, not a
-/// spinner that never resolves.
+/// How long to wait on a callable before giving up. A teacher on school wifi
+/// mid-class needs an error message, not a spinner that never resolves.
 const Duration kVerificationTimeout = Duration(seconds: 90);
+
+/// The region the forked OTP functions are deployed to. Getting this wrong does
+/// not fail loudly: the client calls us-central1, finds nothing, and reports a
+/// generic internal error.
+const String kFunctionsRegion = 'asia-south1';
+
+/// Callable names, forked from the web app's `tcDev*` pair so the two cannot
+/// collide in a project that hosts both.
+const String kSendOtpCallable = 'tcDivyaSendOtp';
+const String kVerifyOtpCallable = 'tcDivyaVerifyOtp';
+
+/// Echoed into the SMS body by the function, via its DLT-approved template.
+const String kPlatformName = 'ThinkTac Teacher Corner';
 
 /// Owns the answer to "who is signed in", and the phone sign-in flow that gets
 /// us there.
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({FirebaseAuth? auth, FirestoreService? firestore})
-    : _injectedAuth = auth,
-      _firestore = firestore ?? FirestoreService();
+  AuthProvider({
+    FirebaseAuth? auth,
+    FirebaseFunctions? functions,
+    FirestoreService? firestore,
+  })  : _injectedAuth = auth,
+        _injectedFunctions = functions,
+        _firestore = firestore ?? FirestoreService();
 
   final FirebaseAuth? _injectedAuth;
+  final FirebaseFunctions? _injectedFunctions;
 
   /// Resolved lazily, on first use. `FirebaseAuth.instance` calls
   /// `Firebase.app()`, which throws in a widget test where Firebase was never
   /// initialised. A stub that only reports a uid must be constructible without
   /// Firebase existing at all.
   late final FirebaseAuth _auth = _injectedAuth ?? FirebaseAuth.instance;
+
+  /// Lazily resolved for the same reason as [_auth]: `instanceFor` reaches for
+  /// `Firebase.app()`, which throws in a widget test where Firebase was never
+  /// initialised, and StubAuthProvider must be constructible without it.
+  late final FirebaseFunctions _functions = _injectedFunctions ??
+      FirebaseFunctions.instanceFor(region: kFunctionsRegion);
 
   final FirestoreService _firestore;
 
@@ -49,8 +73,6 @@ class AuthProvider extends ChangeNotifier {
   LoginStage _stage = LoginStage.phoneEntry;
   bool _busy = false;
   String? _errorKey;
-  String? _verificationId;
-  int? _resendToken;
   String _pendingPhone = '';
   bool _disposed = false;
 
@@ -125,56 +147,35 @@ class AuthProvider extends ChangeNotifier {
     _notify();
   }
 
-  /// Step 1: ask Firebase to SMS a verification code to [tenDigitNumber].
+  /// Step 1: ask the server to SMS a verification code to [tenDigitNumber].
+  ///
+  /// The code is generated, salted and hashed server-side and never travels
+  /// back over this call. Exotel sends it on ThinkTac's DLT-registered
+  /// template, which is the whole reason this path works where Firebase's own
+  /// phone auth is refused for an Indian number (error 17006).
   Future<void> sendOtp(String tenDigitNumber) async {
     // Re-entry guard: read AND set before the first await, so a double tap on a
-    // laggy device cannot start two verifications against the same number.
+    // laggy device cannot start two challenges against the same number.
     if (_busy) return;
     _busy = true;
     _errorKey = null;
     _pendingPhone = '$kDialCode$tenDigitNumber';
     _notify();
 
-    // `verifyPhoneNumber` resolves once the request is submitted, not once a
-    // callback has fired, so the busy flag has to track the callbacks instead.
-    final settled = Completer<void>();
-    void settle() {
-      if (!settled.isCompleted) settled.complete();
-    }
-
     try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: _pendingPhone,
-        forceResendingToken: _resendToken,
-        verificationCompleted: (credential) async {
-          // Android instant verification or auto-retrieval: Firebase already
-          // has the code, so there is nothing for the teacher to type.
-          await _trySignIn(credential);
-          settle();
-        },
-        verificationFailed: (e) {
-          _errorKey = _keyForAuthError(e);
-          _stage = LoginStage.phoneEntry;
-          settle();
-        },
-        codeSent: (verificationId, resendToken) {
-          _verificationId = verificationId;
-          _resendToken = resendToken;
-          _stage = LoginStage.codeEntry;
-          settle();
-        },
-        codeAutoRetrievalTimeout: (verificationId) {
-          // Auto-retrieval gave up. Not an error: the manually typed code still
-          // works, so keep the id and leave the form where it is.
-          _verificationId = verificationId;
-        },
-      );
-      await settled.future.timeout(kVerificationTimeout);
+      await _functions
+          .httpsCallable(kSendOtpCallable)
+          .call<Map<String, dynamic>>({
+            'phone': _pendingPhone,
+            'platformName': kPlatformName,
+          })
+          .timeout(kVerificationTimeout);
+      _stage = LoginStage.codeEntry;
+    } on FirebaseFunctionsException catch (e) {
+      _errorKey = _keyForFunctionsError(e, verifying: false);
+      _stage = LoginStage.phoneEntry;
     } on TimeoutException {
       _errorKey = 'auth.error_network';
-      _stage = LoginStage.phoneEntry;
-    } on FirebaseAuthException catch (e) {
-      _errorKey = _keyForAuthError(e);
       _stage = LoginStage.phoneEntry;
     } catch (e) {
       debugPrint('AuthProvider: sendOtp failed: $e');
@@ -187,12 +188,16 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Step 2: exchange the typed [smsCode] for a session.
+  ///
+  /// The server compares against its stored hash, then mints a Firebase custom
+  /// token keyed on the phone number. Signing in with that token is the only
+  /// thing this does with it: `authStateChanges()` stays the single writer of
+  /// the signed-in state, exactly as it was under phone auth.
   Future<void> verifyOtp(String smsCode) async {
     if (_busy) return;
-    final verificationId = _verificationId;
-    if (verificationId == null) {
-      // No id means the flow was reset or the session lapsed. Send the teacher
-      // back to the number field rather than failing against a stale id.
+    if (_pendingPhone.isEmpty) {
+      // No pending number means the flow was reset or the session lapsed. Back
+      // to the number field rather than verifying against nothing.
       _errorKey = 'auth.error_code_expired';
       _stage = LoginStage.phoneEntry;
       _notify();
@@ -201,16 +206,32 @@ class AuthProvider extends ChangeNotifier {
     _busy = true;
     _errorKey = null;
     _notify();
+
     try {
-      await _trySignIn(
-        PhoneAuthProvider.credential(
-          verificationId: verificationId,
-          smsCode: smsCode,
-        ),
-        rethrowFailures: true,
-      );
+      final result = await _functions
+          .httpsCallable(kVerifyOtpCallable)
+          .call<Map<String, dynamic>>({
+            'phone': _pendingPhone,
+            'otp': smsCode,
+          })
+          .timeout(kVerificationTimeout);
+
+      final token = result.data['token'];
+      if (token is! String || token.isEmpty) {
+        // Verified, but tokenless. The function logs the real cause, which is
+        // usually a missing serviceAccountTokenCreator role on the runtime
+        // service account. Nothing a teacher can act on.
+        debugPrint('AuthProvider: verify succeeded but returned no token');
+        _errorKey = 'auth.error_unknown';
+        return;
+      }
+      await _auth.signInWithCustomToken(token);
+    } on FirebaseFunctionsException catch (e) {
+      _errorKey = _keyForFunctionsError(e, verifying: true);
     } on FirebaseAuthException catch (e) {
       _errorKey = _keyForAuthError(e);
+    } on TimeoutException {
+      _errorKey = 'auth.error_network';
     } catch (e) {
       debugPrint('AuthProvider: verifyOtp failed: $e');
       _errorKey = 'auth.error_unknown';
@@ -220,29 +241,9 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Signs in, and deliberately assigns no state of its own.
-  ///
-  /// `authStateChanges()` is the single writer of [_user], so the signed-in
-  /// state arrives by exactly one path whether the teacher typed a code or
-  /// Android auto-verified behind their back. Two writers here would be two
-  /// chances to disagree.
-  Future<void> _trySignIn(
-    PhoneAuthCredential credential, {
-    bool rethrowFailures = false,
-  }) async {
-    try {
-      await _auth.signInWithCredential(credential);
-    } on FirebaseAuthException catch (e) {
-      if (rethrowFailures) rethrow;
-      // Reached from the verificationCompleted callback, which has no caller to
-      // catch for it, so it has to record its own error.
-      _errorKey = _keyForAuthError(e);
-      _stage = LoginStage.phoneEntry;
-    }
-  }
-
-  /// Back to the number field. Clears the resend token too: it belongs to the
-  /// old number and reusing it against a new one is a confusing failure.
+  /// Back to the number field. Clears the pending number too: the server keys
+  /// its challenge on that number, so carrying a stale one forward would verify
+  /// a code against the wrong phone.
   void changeNumber() {
     _resetFlow();
     _notify();
@@ -271,25 +272,44 @@ class AuthProvider extends ChangeNotifier {
 
   void _resetFlow() {
     _stage = LoginStage.phoneEntry;
-    _verificationId = null;
-    _resendToken = null;
     _pendingPhone = '';
     _errorKey = null;
   }
 
-  /// Maps a Firebase error code onto one of our own l10n keys. Anything
-  /// unrecognised becomes the generic key rather than leaking a code to a
-  /// teacher who cannot act on it.
+  /// Maps the callable's `HttpsError` code onto one of our own l10n keys.
+  ///
+  /// The same code means different things on the two calls, so the caller says
+  /// which one it is: `invalid-argument` on send is a malformed number, on
+  /// verify it is a malformed code.
+  static String _keyForFunctionsError(
+    FirebaseFunctionsException e, {
+    required bool verifying,
+  }) {
+    debugPrint('AuthProvider: FirebaseFunctionsException(${e.code})');
+    return switch (e.code) {
+      'invalid-argument' =>
+        verifying ? 'auth.error_invalid_code' : 'auth.error_invalid_phone',
+      // The server's "Invalid OTP, N attempt(s) remaining".
+      'permission-denied' => 'auth.error_invalid_code',
+      // No challenge stored, or it expired. Both mean: request a new code.
+      'not-found' || 'deadline-exceeded' => 'auth.error_code_expired',
+      // Send cap or attempt cap.
+      'resource-exhausted' => 'auth.error_too_many_requests',
+      'unavailable' => 'auth.error_network',
+      _ => 'auth.error_unknown',
+    };
+  }
+
+  /// Maps a Firebase Auth error onto one of our own l10n keys. Only reachable
+  /// now from `signInWithCustomToken`, so the phone-auth codes are gone and the
+  /// custom-token ones are what remain.
   static String _keyForAuthError(FirebaseAuthException e) {
     debugPrint('AuthProvider: FirebaseAuthException(${e.code})');
     return switch (e.code) {
-      'invalid-phone-number' => 'auth.error_invalid_phone',
-      'invalid-verification-code' => 'auth.error_invalid_code',
-      'invalid-verification-id' ||
-      'session-expired' => 'auth.error_code_expired',
+      'invalid-custom-token' || 'custom-token-mismatch' =>
+        'auth.error_code_expired',
       'too-many-requests' => 'auth.error_too_many_requests',
       'network-request-failed' => 'auth.error_network',
-      'quota-exceeded' => 'auth.error_quota',
       _ => 'auth.error_unknown',
     };
   }

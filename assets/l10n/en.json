@@ -1,6 +1,7 @@
 {
   "app": {
-    "title": "Teacher Corner"
+    "title": "Teacher Corner",
+    "brand": "ThinkTac"
   },
   "common": {
     "retry": "Retry",
@@ -19,7 +20,9 @@
     "profile": "Profile"
   },
   "splash": {
-    "message": "Getting things ready…"
+    "message": "Getting things ready…",
+    "product": "Teacher Corner",
+    "tagline": "Empowering every classroom"
   },
   "auth": {
     "title": "Teacher Corner",
@@ -32,9 +35,9 @@
     "otp_hint": "6-digit code",
     "otp_invalid": "Enter the 6-digit code.",
     "otp_sent": "We sent a code to {}.",
-    "verify": "Verify",
+    "verify": "Verify & Login",
     "change_number": "Change number",
-    "resend_otp": "Resend code",
+    "resend_otp": "Resend OTP",
     "sign_out": "Sign out",
     "error_invalid_phone": "That mobile number is not valid.",
     "error_invalid_code": "That code is not correct. Check it and try again.",
@@ -42,7 +45,14 @@
     "error_too_many_requests": "Too many attempts. Wait a few minutes, then try again.",
     "error_network": "No connection. Check your network and try again.",
     "error_quota": "Verification is temporarily unavailable. Try again later.",
-    "error_unknown": "Sign-in failed. Try again."
+    "error_unknown": "Sign-in failed. Try again.",
+    "welcome_title": "Welcome back",
+    "welcome_subtitle": "Enter your mobile number to continue",
+    "consent": "I agree to receive OTP on this number.",
+    "consent_terms": "Terms apply.",
+    "verify_title": "Verify OTP",
+    "otp_prompt": "Enter the 6-digit code sent to",
+    "resend_in": "Resend in {}s"
   },
   "classrooms": {
     "title": "My Classrooms",
@@ -82,7 +92,12 @@
   "profile": {
     "title": "Profile",
     "no_profile": "Your teacher profile has not been set up yet.",
-    "uid_label": "Auth uid (debug)"
+    "uid_label": "Auth uid (debug)",
+    "language": "Language",
+    "help_title": "Help & Guide",
+    "help_subtitle": "How to use the app",
+    "help_empty_title": "Nothing here yet",
+    "help_empty_subtitle": "Guidance for using the app will be added here."
   },
   "dashboard": {
     "greeting": "Welcome back",
@@ -140,5 +155,17 @@
     "error_title": "Teacher Corner could not start",
     "error_message": "Something went wrong setting up the app on this device. Try again, and if it keeps happening, reinstall.",
     "retry": "Try again"
+  },
+  "language": {
+    "en": "English",
+    "hi": "हिन्दी",
+    "mr": "मराठी",
+    "ta": "தமிழ்",
+    "te": "తెలుగు",
+    "kn": "ಕನ್ನಡ",
+    "bn": "বাংলা",
+    "gu": "ગુજરાતી",
+    "or": "ଓଡ଼ିଆ",
+    "ur": "اردو"
   }
 }

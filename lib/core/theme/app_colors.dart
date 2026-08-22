@@ -46,6 +46,15 @@ class AppColors {
   static const ispfTeal = Color(0xFF228E95);
   static const ispfMustard = Color(0xFFE69A2D);
 
+  /// Warm accent for the splash product label ("TEACHER CORNER") only.
+  ///
+  /// The palette above is deliberately a two-colour system, so this is a
+  /// documented exception rather than a new brand colour: it is the mustard
+  /// already in the file, reused because the 2026-08 sign-in mockup Divya
+  /// approved puts that label in warm orange. Resolve it back to navy or sky if
+  /// the brand owner says no. Do NOT spread it to other chrome.
+  static const splashProductLabel = ispfMustard;
+
   // ───── Retired aliases ──────────────────────────────────────────────────
   // Legacy code paths still reference these tokens. Each now resolves to the
   // canonical palette so existing widgets render on-brand without a one-shot
@@ -59,6 +68,11 @@ class AppColors {
   // ───── Mockup-pattern helpers (2026-06 redesign) ─────────────────────────
   /// Translucent white tile on a navy hero (mockup stat tiles).
   static final heroTileBg = white.withValues(alpha: 0.12);
+
+  /// Supporting text ON a navy surface (splash tagline, hero subtitles).
+  /// Pure white for a whole sentence of supporting copy is too loud against
+  /// navy; this is the dimmed step that the mockup uses.
+  static final onNavySecondary = white.withValues(alpha: 0.82);
 
   /// 10% sky tint — icon tiles, badges, selected rows.
   static final skyBg = skyBlue.withValues(alpha: 0.10);

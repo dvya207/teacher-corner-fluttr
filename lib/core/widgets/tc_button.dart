@@ -4,7 +4,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_dimensions.dart';
 import '../theme/app_typography.dart';
 
-enum TcButtonVariant { primary, outlined, success, danger }
+/// `navy` is the sign-in mockup's CTA. It is additive: every existing call site
+/// keeps `primary` (sky) untouched.
+enum TcButtonVariant { primary, navy, outlined, success, danger }
 
 class TcButton extends StatelessWidget {
   final String label;
@@ -78,6 +80,7 @@ class TcButton extends StatelessWidget {
 
   (Color, Color) get _variantColors => switch (variant) {
     TcButtonVariant.primary => (AppColors.skyBlue, AppColors.white),
+    TcButtonVariant.navy => (AppColors.navy, AppColors.white),
     TcButtonVariant.outlined => (AppColors.skyBlue, AppColors.skyBlue),
     TcButtonVariant.success => (AppColors.successGreen, AppColors.white),
     TcButtonVariant.danger => (AppColors.errorRed, AppColors.errorRed),
