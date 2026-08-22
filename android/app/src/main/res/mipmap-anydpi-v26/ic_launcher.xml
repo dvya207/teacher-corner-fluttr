@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive launcher icon, API 26+. Below that (minSdk is 24, so API 24 and 25
+     are real) the launcher falls back to the flat mipmap-*/ic_launcher.png,
+     which is why those PNGs are the finished circle rather than a square.
+
+     Background is @color/tc_launch_navy, the same token the splash window and
+     the API 31+ SplashScreen use, so the launcher icon and the screen it opens
+     into are the same navy. Foreground is generated from
+     assets/images/thinktacLogo_white.svg by tools/svg_to_vector_drawable.py. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/tc_launch_navy" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

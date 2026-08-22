@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors AppColors.navyDark (0xFF1E2258) in lib/core/theme/app_colors.dart,
+         the first stop of AppColors.heroGradient that SplashScreen paints.
+         Android resources cannot read a Dart token, so this is the one place the
+         brand navy is duplicated. Change both together or the launch will flash. -->
+    <color name="tc_launch_navy">#FF1E2258</color>
+</resources>

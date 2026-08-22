@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round variant, referenced by android:roundIcon (API 25+). Identical layers
+     to ic_launcher.xml on purpose: the mark is already circular, so there is
+     nothing to redraw for a round mask. It exists so launchers that ask for the
+     round resource get the ThinkTac mark rather than falling back to the
+     framework default. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/tc_launch_navy" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
