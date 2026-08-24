@@ -86,16 +86,22 @@ const String kDatabaseId = 'teacher-corner-dev';
 ```
 
 `helix-staging-india` holds several named databases: `(default)`, `bugpulse`,
-`ezblog`, `sidteachercorner`, `divya-teacher-corner` and `teacher-corner-dev`.
+`ezblog`, `sidteachercorner` and `teacher-corner-dev`.
 The last one belongs to the **live Angular Teacher Corner web app** in
 `~/code/teacher-corner`, and it holds real teachers, classrooms and programmes
 that real people are using. This app is a guest in it, so that a teacher's
 details have ONE source of truth rather than a seeded copy.
 
-`divya-teacher-corner` still exists and is no longer read or written by anything
-except the `tcDivya*` OTP functions' own `OTPVerifications` collection, which is
-deliberately kept out of the shared database. Do not point `kDatabaseId` back at
-it.
+`divya-teacher-corner` is the database this app used to own. It was **deleted on
+2026-08-24**, after the `tcDivya*` OTP functions were repointed at
+`teacher-corner-dev` and redeployed, so this app now uses one database for
+everything it touches. Their `OTPVerifications` documents are therefore SHARED with the web
+app's own `tcDevSendOtp` / `tcDevVerifyOtp`, which key a document on the same
+normalized phone number. For a number used in both apps that means one challenge
+at a time, one send cap and one attempt cap between them; the header of
+`functions-otp/src/index.ts` sets out exactly what that costs and why it was
+accepted. The old database no longer exists, so pointing `kDatabaseId` back at
+it would not fall back to anything; every read and write would simply fail.
 
 **This is the single biggest trap in this project.** `FirebaseFirestore.instance`
 *always* talks to the `(default)` database. It does not error, it does not warn,

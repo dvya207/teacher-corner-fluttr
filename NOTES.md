@@ -323,6 +323,11 @@ load-bearing on a project that hosts several apps:
   out of reach of a deploy from here. This must never be changed to `default`.
 - **Database.** `divya-teacher-corner`, so the OTP challenges and, more
   importantly, the rate-limit counters are ours and not shared with the web app.
+  **Superseded by the repoint, below.** The functions now write
+  `OTPVerifications` to `teacher-corner-dev`, so for a number used in both apps
+  the challenge document, the send cap and the attempt cap are all shared with
+  the web app. That was the price of one database for everything, taken
+  deliberately; `functions-otp/src/index.ts` documents the three consequences.
 
 The Exotel credentials are the SAME two Secret Manager secrets. Binding a secret
 to a new function grants read access; it does not alter the secret or any

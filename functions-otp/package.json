@@ -1,7 +1,7 @@
 {
   "name": "divya-teacher-corner-otp-functions",
   "private": true,
-  "//": "Fork of the web app's functions-otp, retargeted to the divya-teacher-corner database with tcDivya* function names in the divya-otp codebase. The web app copy is untouched and stays deployed.",
+  "//": "Fork of the web app's functions-otp, writing to the teacher-corner-dev database with tcDivya* function names in the divya-otp codebase. The web app copy is untouched and stays deployed. The package name above predates the repoint and names this repo, not the database.",
   "engines": { "node": "20" },
   "main": "lib/index.js",
   "scripts": {

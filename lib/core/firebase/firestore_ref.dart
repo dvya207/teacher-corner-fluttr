@@ -4,8 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 /// Single source of truth for WHICH Firestore database this app talks to.
 ///
 /// `helix-staging-india` hosts several named databases side by side, the
-/// `(default)` one plus `bugpulse`, `ezblog`, `sidteachercorner`,
-/// `divya-teacher-corner` and `teacher-corner-dev`. Named databases are NOT
+/// `(default)` one plus `bugpulse`, `ezblog`, `sidteachercorner` and
+/// `teacher-corner-dev`. Named databases are NOT
 /// reachable through `FirebaseFirestore.instance`: that constant always resolves
 /// to `(default)`, silently, with no error. If you write through it you will
 /// spend an afternoon wondering why the Console shows nothing.
@@ -32,11 +32,12 @@ import 'package:firebase_core/firebase_core.dart';
 ///      put duplicate teachers and classrooms into a database a working app is
 ///      reading.
 ///
-/// `divya-teacher-corner` is the database this app used to own. NOTHING reads or
-/// writes it any more: the `tcDivya*` OTP functions were repointed at
-/// `teacher-corner-dev` too, so the app uses one database for everything. The
-/// old one still exists and can be deleted once the OTP flow is verified against
-/// its new home. Do not point this constant back at it.
+/// `divya-teacher-corner` is the database this app used to own. It was DELETED
+/// on 2026-08-24, after the `tcDivya*` OTP functions were repointed at
+/// `teacher-corner-dev` and redeployed, so this app now uses one database for
+/// everything it touches. It is gone, not dormant: pointing this constant back
+/// at it would not fall back to anything, every read and write would simply
+/// fail. There is exactly one correct value.
 const String kDatabaseId = 'teacher-corner-dev';
 
 /// The one Firestore handle the app uses.
