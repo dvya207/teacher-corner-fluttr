@@ -61,11 +61,19 @@ class SplashGate extends ChangeNotifier {
 
 /// How long the splash is held before the router will route past it.
 ///
-/// 30 SECONDS, on Divya's explicit instruction. Flagging the cost rather than
-/// arguing it: this is paid on EVERY launch, warm ones included, by a teacher
-/// standing in front of a class who wants the activity on screen. It is also
-/// long enough that Android may look unresponsive and a teacher may conclude
-/// the app has hung and force-close it.
+/// 2 SECONDS. This was 30, and the cost of that was the objection recorded here
+/// at the time: it is paid on EVERY launch, warm ones included, by a teacher
+/// standing in front of a class who wants the activity on screen, and it is long
+/// enough that a teacher may conclude the app has hung and force-close it.
+///
+/// WHY A FLOOR AT ALL, rather than zero. Auth and Firebase usually resolve in
+/// well under a second on a warm start, so with no floor the branded splash
+/// appears for a frame or two and reads as a flicker. Two seconds is long enough
+/// to register the brand and short enough not to be waited on.
+///
+/// It is also a FLOOR, not a delay: if auth takes longer than this the splash
+/// stays up until it resolves, which is what stops the login screen flashing
+/// before the dashboard on a cold start.
 ///
 /// It is one constant. Change it here and nothing else moves.
-const Duration kSplashMinimumDisplay = Duration(seconds: 30);
+const Duration kSplashMinimumDisplay = Duration(seconds: 2);
