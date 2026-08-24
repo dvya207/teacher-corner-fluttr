@@ -118,8 +118,12 @@ void main() {
         firestore: FakeFirestoreService(teacher: seededTeacher()),
       );
 
-      // teacherMeta wins over the top-level "Intern Teacher".
-      expect(find.text('Divya Jain'), findsOneWidget);
+      // teacherMeta wins over the top-level "Intern Teacher", and the greeting
+      // uses the FIRST name only: "Good afternoon, Divya Jain" reads like a
+      // letter from an institution. Matched on a fragment because the rest of
+      // the line is the time of day, which changes through the day.
+      expect(find.textContaining('Divya'), findsWidgets);
+      expect(find.text('Divya Jain'), findsNothing);
       // Twice now, and correctly so: once as the hero subtitle and once on the
       // ET club's card, whose subtitle is the institution alone because that
       // classroom has no grade or section.
@@ -207,7 +211,7 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Divya Jain'), findsOneWidget);
+      expect(find.textContaining('Divya'), findsWidgets);
     });
 
     testWidgets('a long name and institution do not overflow', (tester) async {
@@ -289,7 +293,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Divya Jain'), findsOneWidget);
+      expect(find.textContaining('Divya'), findsWidgets);
       expect(find.text('Classrooms'), findsWidgets);
       expect(find.byType(ClassroomCard), findsNWidgets(2));
       // No partial total: one missing document would make any sum understate

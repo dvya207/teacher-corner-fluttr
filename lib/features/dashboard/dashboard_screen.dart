@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/tc_avatar_chip.dart';
 import '../../core/widgets/tc_brand_tile.dart';
 import '../../core/widgets/tc_button.dart';
 import '../../core/widgets/tc_hero_header.dart';
@@ -18,6 +19,7 @@ import '../auth/auth_provider.dart';
 import '../classrooms/classroom_list_item.dart';
 import '../classrooms/widgets/classroom_card.dart';
 import 'dashboard_provider.dart';
+import 'greeting.dart';
 
 /// The teacher's name, their institution, and how much they are carrying.
 class DashboardScreen extends StatefulWidget {
@@ -102,7 +104,7 @@ class _LoadedState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final account = dashboard.account;
-    final name = account?.displayName ?? '';
+    final firstName = account?.firstName ?? '';
 
     return SingleChildScrollView(
       // Scrollable so landscape and a maxed-out system font size push content
@@ -111,19 +113,39 @@ class _LoadedState extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           TcHeroHeader(
-            // The ThinkTac mark, top left. Only on the dashboard: the classroom
-            // and programme screens use that corner for the back arrow, and a
-            // logo on every screen is chrome rather than branding.
-            leading: const TcBrandMark(),
-            overline: 'dashboard.greeting'.tr(),
-            // Falls back to the greeting alone rather than rendering an empty
-            // title or the word "null".
-            title: name.isNotEmpty ? name : 'app.title'.tr(),
-            // NO SUBTITLE, deliberately. The institution used to sit under the
-            // name here and was removed on instruction: the greeting is about
-            // who the teacher is, and their school is already on every classroom
-            // card below, so repeating it in the header was noise. The header
-            // still resolves it for other screens, which do want it.
+            // The ThinkTac mark, top left, at the size the design shows. Only on
+            // the dashboard: the classroom and programme screens use that corner
+            // for the back arrow, and a logo on every screen is chrome rather
+            // than branding.
+            leading: const TcBrandMark(size: 64),
+            // The avatar sits on its own row at the top right, ABOVE the
+            // greeting, and is the short route to the profile from the screen a
+            // teacher lands on.
+            topTrailing: TcAvatarChip(
+              initials: account?.initials ?? '',
+              semanticLabel: 'dashboard.open_profile'.tr(),
+              onTap: () => context.go('/profile'),
+            ),
+            // ONE LINE, greeting and name together, because that is what the
+            // design shows and because "Good afternoon, Divya" is a sentence
+            // where an overline plus a name is a form field. Time of day comes
+            // from a pure function so its boundaries are testable.
+            //
+            // With no name known the greeting still reads correctly: the
+            // placeholder takes the app's own name rather than rendering an
+            // empty gap or the word "null".
+            title: greetingKeyFor(DateTime.now()).tr(
+              args: [firstName.isNotEmpty ? firstName : 'app.title'.tr()],
+            ),
+            // The institution, RIGHT-ALIGNED under the avatar. It was removed
+            // from under the name on instruction and belongs here instead: this
+            // says which school the numbers below are about, without competing
+            // with the greeting.
+            subtitle: account?.institutionName,
+            subtitleAlignEnd: true,
+            // 20, not the shared 24: at 24 the greeting wraps to two lines
+            // beside a 64px logo, and the design shows it on one.
+            titleFontSize: 20,
 
             children: [
               // Omitted when the total is not knowable, which happens when an

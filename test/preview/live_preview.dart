@@ -29,6 +29,7 @@ import 'package:tc_starter/features/dashboard/dashboard_provider.dart';
 import 'package:tc_starter/features/dashboard/dashboard_screen.dart';
 import 'package:tc_starter/features/classrooms/classroom_detail_provider.dart';
 import 'package:tc_starter/features/classrooms/classroom_detail_screen.dart';
+import 'package:tc_starter/features/profile/help_guide_screen.dart';
 import 'package:tc_starter/features/profile/profile_screen.dart';
 import 'package:tc_starter/features/programmes/programme_detail_provider.dart';
 import 'package:tc_starter/features/programmes/programme_detail_screen.dart';
@@ -361,6 +362,17 @@ void main() {
       ),
     );
     await shoot(tester, '07_programme_detail');
+  });
+
+  testWidgets('help and guide, top', (tester) async {
+    // A tall surface, so the whole guide renders in one image rather than one
+    // screenful of it.
+    await pumpScreen(
+      tester,
+      child: const HelpGuideScreen(),
+      surfaceSize: const Size(360, 2600),
+    );
+    await shoot(tester, '08_help_guide_top');
   });
 
   testWidgets('profile, a teacher with no linked record', (tester) async {

@@ -31,6 +31,29 @@ class TcHeroHeader extends StatelessWidget {
   /// anything else needed the space.
   final Widget? leading;
 
+  /// Pinned to the TOP RIGHT, on its own row above everything else.
+  ///
+  /// Distinct from [trailing], which sits inline beside the title. The dashboard
+  /// needs the avatar above the greeting rather than next to it, and the two
+  /// cannot share a slot without one screen's layout dictating the other's.
+  final Widget? topTrailing;
+
+  /// Right-aligns [subtitle] instead of leaving it under the title.
+  ///
+  /// The dashboard puts the institution at the far right, under the avatar; the
+  /// classroom and programme screens want theirs under the title. One flag
+  /// rather than two header widgets.
+  final bool subtitleAlignEnd;
+
+  /// Title size in design pixels, scaled with `.sp` at build time.
+  ///
+  /// Adjustable because the dashboard's title is a SENTENCE ("Good afternoon,
+  /// Divya") where every other screen's is a NAME ("9 B"). At the shared 24 the
+  /// sentence wraps to two lines beside the logo, which the design shows on one.
+  /// It still wraps for a long name rather than truncating it — a teacher's name
+  /// is not the thing to cut.
+  final double titleFontSize;
+
   final List<Widget> children;
 
   const TcHeroHeader({
@@ -44,6 +67,9 @@ class TcHeroHeader extends StatelessWidget {
     this.onBack,
     this.leading,
     this.trailing,
+    this.topTrailing,
+    this.subtitleAlignEnd = false,
+    this.titleFontSize = 24,
     this.children = const [],
   });
 
@@ -65,6 +91,8 @@ class TcHeroHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (topTrailing != null)
+                Align(alignment: Alignment.topRight, child: topTrailing!),
               if (breadcrumb != null || showBack)
                 Row(
                   children: [
@@ -126,7 +154,7 @@ class TcHeroHeader extends StatelessWidget {
                           title,
                           style: AppTypography.heading1.copyWith(
                             color: AppColors.white,
-                            fontSize: 24.sp,
+                            fontSize: titleFontSize.sp,
                           ),
                         ),
                         // INSIDE this column, with the overline and the title,
@@ -134,7 +162,7 @@ class TcHeroHeader extends StatelessWidget {
                         // aligned to the container instead, which put the
                         // institution under the logo while the name sat
                         // indented past it.
-                        if (subtitle != null) ...[
+                        if (subtitle != null && !subtitleAlignEnd) ...[
                           SizedBox(height: 4.h),
                           Text(
                             subtitle!,
@@ -150,6 +178,20 @@ class TcHeroHeader extends StatelessWidget {
                     trailing!,
                 ],
               ),
+              // OUTSIDE the text column, so it aligns to the container's right
+              // edge rather than to the title's left one.
+              if (subtitle != null && subtitleAlignEnd) ...[
+                SizedBox(height: 4.h),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    subtitle!,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ),
+              ],
               if (children.isNotEmpty) ...[
                 SizedBox(height: 16.h),
                 Row(

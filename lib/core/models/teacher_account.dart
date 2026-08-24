@@ -56,6 +56,43 @@ class TeacherAccount {
     return '';
   }
 
+  /// Just the first name, for a greeting.
+  ///
+  /// A GREETING USES ONE NAME. "Good afternoon, Divya Jain" reads like a letter
+  /// from an institution; "Good afternoon, Divya" reads like the app knows who
+  /// is holding it.
+  ///
+  /// Falls back to the first word of [displayName] rather than to nothing,
+  /// because a record carrying only a top-level `name` still has a first name in
+  /// it — it is just not split into fields. Empty when nothing is known, so the
+  /// caller can drop the name from the greeting entirely instead of greeting a
+  /// blank.
+  String get firstName {
+    for (final candidate in [profile?.firstName, teaching?.meta?.firstName]) {
+      final trimmed = candidate?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    }
+    final whole = displayName.trim();
+    if (whole.isEmpty) return '';
+    return whole.split(RegExp(r'\s+')).first;
+  }
+
+  /// Initials for the avatar: first letters of the first two words, or one
+  /// letter, or empty.
+  ///
+  /// Derived here rather than in the widget so the dashboard and anything else
+  /// showing an avatar cannot disagree about what a teacher's initials are.
+  String get initials {
+    final parts = displayName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
+  }
+
   /// The school, preferring the profile and falling back to the teaching
   /// record, which derives it from the classrooms.
   String? get institutionName {
