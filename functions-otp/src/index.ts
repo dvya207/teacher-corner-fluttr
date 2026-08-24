@@ -35,7 +35,8 @@ import {
  *     considers same-codebase functions for deletion, so this deploy cannot
  *     offer to remove the web app's 'tcdev-otp' pair, nor sendWelcomeEmail and
  *     expenseLogTotals sitting in the default codebase.
- *   - DATABASE. divya-teacher-corner, see DATABASE_ID below.
+ *   - DATABASE. teacher-corner-dev, see DATABASE_ID below. NOTE the shared
+ *     rate-limit consequence documented there.
  *
  * The Exotel credentials are the SAME Secret Manager secrets. Binding a secret
  * to a new function only grants read access; it does not alter the secret or
@@ -54,10 +55,9 @@ import {
  *      owner of any function in the console is obvious.
  *
  *   2. DATABASE. The guide uses admin.firestore(), which is the (default)
- *      database — shared with four other apps, and whose rules a deploy from
- *      this repo must never replace. This app owns the NAMED
- *      'teacher-corner-dev' database outright, so OTPVerifications lives there
- *      and the rules deploy is scoped to it.
+ *      database — shared with four other apps. This writes to the NAMED
+ *      'teacher-corner-dev' database instead, the same one the app reads its
+ *      teachers and classrooms from.
  *
  *   3. RATE-LIMIT PERSISTENCE. See the comment on clearChallenge below. The
  *      guide deletes the whole document on expiry, on attempt-exhaustion and on
@@ -71,15 +71,37 @@ import {
 initializeApp();
 
 /**
- * NOT (default), and NOT teacher-corner-dev.
+ * teacher-corner-dev, on instruction: one database for everything this app
+ * touches, and the old divya-teacher-corner retired.
  *
- * Omitting the id would write OTP challenges into the database several apps
- * share. Naming teacher-corner-dev would write them into the web app's
- * database, where they would share that app's rate-limit counters and sit under
- * a ruleset this repo must never deploy. This app owns divya-teacher-corner
- * outright, so its challenges live there and nowhere else.
+ * READ THIS BEFORE DEPLOYING. That database is owned by the live Teacher Corner
+ * web app, and it ALREADY HAS AN OTPVerifications COLLECTION written by its own
+ * tcDevSendOtp / tcDevVerifyOtp. Both functions key a document on the normalized
+ * phone number, so for a number used in BOTH apps the two now share one
+ * document. Three consequences, none of which stops either app working but all
+ * of which are real:
+ *
+ *   - LAST SEND WINS. The document holds ONE hashedOtp and salt, so requesting a
+ *     code in one app invalidates any code still outstanding in the other. A
+ *     teacher cannot hold two pending challenges at once across the two apps.
+ *   - THE SEND CAP IS SHARED. requestCount and windowStart are per document, so
+ *     sends from this app count against that number's budget in the web app and
+ *     vice versa. That budget is what bounds spend on an Exotel account whose
+ *     credentials cannot be rotated, so sharing it is a spend decision as much
+ *     as a correctness one.
+ *   - ATTEMPTS ARE SHARED. The five-attempt cap is on the document, so failed
+ *     attempts in one app consume the other's.
+ *
+ * A number used in only one app is unaffected. The collision is confined to
+ * numbers used in both, and the failure mode is "request a fresh code", not a
+ * broken account.
+ *
+ * IT IS STILL WRITE-SAFE FOR THE WEB APP'S DATA. Only OTPVerifications is
+ * touched, a collection the web app treats exactly the same way, and the rules
+ * are not deployed from this repo — there is no `firestore` block in
+ * firebase.json precisely so that cannot happen.
  */
-const DATABASE_ID = 'divya-teacher-corner';
+const DATABASE_ID = 'teacher-corner-dev';
 
 /** Guide's collection name and document key: one doc per normalized phone. */
 const COLLECTION = 'OTPVerifications';

@@ -32,10 +32,11 @@ import 'package:firebase_core/firebase_core.dart';
 ///      put duplicate teachers and classrooms into a database a working app is
 ///      reading.
 ///
-/// `divya-teacher-corner` is the database this app used to own, and it still
-/// exists. It is no longer read or written by anything except the `tcDivya*` OTP
-/// functions' own `OTPVerifications` collection, which is deliberately NOT
-/// shared. Do not point this constant back at it.
+/// `divya-teacher-corner` is the database this app used to own. NOTHING reads or
+/// writes it any more: the `tcDivya*` OTP functions were repointed at
+/// `teacher-corner-dev` too, so the app uses one database for everything. The
+/// old one still exists and can be deleted once the OTP flow is verified against
+/// its new home. Do not point this constant back at it.
 const String kDatabaseId = 'teacher-corner-dev';
 
 /// The one Firestore handle the app uses.

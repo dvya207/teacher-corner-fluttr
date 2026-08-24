@@ -34,7 +34,18 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
+  /// ONE KEY PER STAGE, and that separation is the fix for a real bug.
+  ///
+  /// Both stages wrap their field in a `Form`, and they used to SHARE one key.
+  /// Only one stage is mounted at a time so nothing crashed, but it meant
+  /// `_formKey.currentState.validate()` validated whichever field happened to be
+  /// on screen rather than the one the action was about. Tapping Resend on the
+  /// code stage therefore validated the OTP box — empty or partial precisely
+  /// when a teacher wants a new code — failed, and returned without sending
+  /// anything, while showing a "enter the 6-digit code" error for a button that
+  /// has nothing to do with the code.
+  final _phoneFormKey = GlobalKey<FormState>();
+  final _codeFormKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
 
@@ -116,8 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  /// First send, from the phone stage. Validates the PHONE form.
   Future<void> _sendOtp(AuthProvider auth) async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!(_phoneFormKey.currentState?.validate() ?? false)) return;
     // Clear any stale code before a fresh send, so a code typed against the
     // previous number cannot be submitted against this one.
     _codeController.clear();
@@ -126,8 +138,34 @@ class _LoginScreenState extends State<LoginScreen> {
     _startResendCountdown();
   }
 
+  /// Resend, from the code stage.
+  ///
+  /// DELIBERATELY DOES NOT VALIDATE ANY FORM. The only form mounted here holds
+  /// the OTP field, and requiring a valid code before sending a new one is
+  /// backwards: a teacher taps this precisely because they have no usable code.
+  ///
+  /// The number is re-checked directly instead. That is not ceremony — it is the
+  /// same guard the phone stage applies, and it is the one thing that must still
+  /// hold, since a resend spends a real SMS against a production Exotel account.
+  Future<void> _resendOtp(AuthProvider auth) async {
+    final digits = _phoneController.text.trim();
+    if (!kIndianMobile.hasMatch(digits)) {
+      // Should be unreachable: reaching the code stage required a valid number.
+      // Sending the teacher back to fix it beats silently doing nothing.
+      _changeNumber(auth);
+      return;
+    }
+    // The old code is void the moment a new one is requested, so it goes now
+    // rather than being left in the boxes to be submitted against the new
+    // challenge and burn one of the server's five attempts.
+    _codeController.clear();
+    await auth.sendOtp(digits);
+    if (!mounted) return;
+    _startResendCountdown();
+  }
+
   Future<void> _verifyOtp(AuthProvider auth) async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!(_codeFormKey.currentState?.validate() ?? false)) return;
     await auth.verifyOtp(_codeController.text.trim());
   }
 
@@ -157,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // landscape both shrink the viewport below the content height, and a
         // fixed column simply overflows.
         child: Form(
-          key: _formKey,
+          key: _phoneFormKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -435,7 +473,7 @@ class _LoginScreenState extends State<LoginScreen> {
           vertical: AppDimensions.spacing32,
         ),
         child: Form(
-          key: _formKey,
+          key: _codeFormKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -526,7 +564,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: AppTypography.caption,
         ),
         GestureDetector(
-          onTap: canResend && !auth.isBusy ? () => _sendOtp(auth) : null,
+          onTap: canResend && !auth.isBusy ? () => _resendOtp(auth) : null,
           child: Text(
             'auth.resend_otp'.tr(),
             style: AppTypography.label.copyWith(
