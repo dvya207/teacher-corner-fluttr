@@ -79,9 +79,16 @@ class FirestoreService {
   /// would hand one teacher another's classrooms. That check is the whole safety
   /// of the fallback.
   ///
-  /// NOTHING IS WRITTEN. The uid could be stamped here to make later loads a
-  /// single indexed query, but that is a write into a collection this app only
-  /// reads, so the match is redone each sign-in instead.
+  /// NOTHING IS WRITTEN HERE. `tcDivyaVerifyOtp` stamps `teacherMeta.uid`
+  /// server-side the moment a correct code is presented, which is the one point
+  /// where the number is PROVEN rather than claimed, and where the Admin SDK
+  /// belongs rather than the client.
+  ///
+  /// So the phone fallback is now a SAFETY NET, not the normal path: it covers
+  /// records registered before that linking existed, and the case where the
+  /// stamping write failed — it is best-effort by design, because a teacher with
+  /// a correct code must not lose their session over bookkeeping. Keeping the
+  /// fallback means such a teacher still sees their classrooms.
   Future<Teacher?> fetchTeacher(String uid, {String? phoneNumber}) async {
     // 1. By uid. Exact, indexed, and correct for anyone the web app has linked.
     //    limit(1): one person should have one record, and if the data ever

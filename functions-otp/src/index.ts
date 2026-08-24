@@ -315,15 +315,92 @@ export const tcDivyaVerifyOtp = onCall(
     //   - createUser fires this project's EXISTING beforeCreate blocking Auth
     //     trigger, sendWelcomeEmail, which belongs to another app. Whether it
     //     tolerates a user with no email address is unverified.
-    const token = await mintToken(normalizedPhone);
+    const { token, uid } = await mintToken(normalizedPhone);
 
     // Cleared only AFTER the token exists, so a failure above does not strand
     // the user having spent a valid code.
     await clearChallenge(ref);
 
+    // AFTER the token, and deliberately not awaited for its result being
+    // required: linking is bookkeeping, and a teacher must never lose a
+    // sign-in because it failed. See the function's own comment.
+    await linkTeacherRecord(normalizedPhone, uid);
+
     return { success: true, token };
   }
 );
+
+/** The collection of teacher records an administrator registers. */
+const TEACHERS_COLLECTION = 'teachers';
+
+/**
+ * Records a verified teacher's Auth uid on their teaching record.
+ *
+ * THIS IS THE SAME OPERATION `TeacherService.linkSignedInUid` PERFORMS IN THE
+ * WEB APP, moved to where this app's sign-ins actually happen. That function
+ * runs on a WEB sign-in, so a teacher an administrator registered whose first
+ * sign-in is in the Flutter app was never linked at all: their record sat in
+ * `teachers` with their classrooms on it and `teacherMeta.uid` empty, and the
+ * app could only find it by falling back to matching the phone number on every
+ * launch. Stamping it here closes that for good, for both apps.
+ *
+ * WHY HERE AND NOT IN THE CLIENT. This is a write into a collection the Flutter
+ * app otherwise only reads, and the client has no business holding that
+ * privilege. Here it runs with the Admin SDK at the one moment the phone number
+ * is PROVEN — a correct OTP was just presented for it — so the number is
+ * evidence rather than a claim.
+ *
+ * MATCHED ON THE SUBSCRIBER DIGITS, which is the key the web app matches on:
+ * `teacherMeta.phoneNumber` and `teacherMeta.phone` both hold them, so both are
+ * tried. Firestore cannot OR across two fields in one query.
+ *
+ * ONLY FILLS A BLANK, exactly as the web app does. A record already carrying a
+ * uid is left alone: phone numbers get recycled, and overwriting would hand one
+ * person another's classrooms. A record already carrying THIS uid needs nothing.
+ *
+ * BEST EFFORT, AND THAT IS LOAD-BEARING. Every failure is swallowed after
+ * logging. A teacher presenting a correct code has earned their session, and
+ * must not lose it because a bookkeeping write failed — the client's phone
+ * fallback still resolves their record in that case, so the only cost of failing
+ * here is that it stays unlinked and is retried next sign-in.
+ */
+async function linkTeacherRecord(phoneNumber: string, uid: string): Promise<void> {
+  try {
+    const digits = phoneNumber.replace(/\D/g, '').slice(-10);
+    if (digits.length < 10) return;
+
+    for (const field of ['teacherMeta.phoneNumber', 'teacherMeta.phone']) {
+      const matches = await db
+        .collection(TEACHERS_COLLECTION)
+        .where(field, '==', digits)
+        // A handful is plenty for one number, and a cap stops a pathological
+        // query fanning out on a shared database.
+        .limit(5)
+        .get();
+
+      for (const doc of matches.docs) {
+        const stamped = (doc.data().teacherMeta ?? {}).uid;
+        if (stamped) continue; // Somebody's already, possibly somebody else's.
+
+        // DOTTED PATHS, so nothing else on teacherMeta is rewritten from a copy
+        // read a moment ago. updatedAt moves because the document did change.
+        await doc.ref.update({
+          'teacherMeta.uid': uid,
+          'teacherMeta.updatedAt': FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+        logger.info('Linked a teacher record to a verified uid', {
+          teacherDoc: doc.id
+        });
+        return; // One person, one record. Stop at the first blank filled.
+      }
+    }
+  } catch (error) {
+    logger.error('Could not link the teacher record; sign-in is unaffected', {
+      message: (error as { message?: string }).message
+    });
+  }
+}
 
 /**
  * Finds or creates the Auth user for a phone number and mints a custom token.
@@ -333,7 +410,9 @@ export const tcDivyaVerifyOtp = onCall(
  * the already-exists error would work too, but it fires the project's
  * beforeCreate trigger on every sign-in rather than only on registration.
  */
-async function mintToken(phoneNumber: string): Promise<string> {
+async function mintToken(
+  phoneNumber: string
+): Promise<{ token: string; uid: string }> {
   const auth = getAuth();
 
   let uid: string;
@@ -356,7 +435,7 @@ async function mintToken(phoneNumber: string): Promise<string> {
   }
 
   try {
-    return await auth.createCustomToken(uid);
+    return { token: await auth.createCustomToken(uid), uid };
   } catch (error) {
     logger.error('createCustomToken failed. Check serviceAccountTokenCreator on the runtime SA.', {
       code: (error as { code?: string }).code
