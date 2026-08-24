@@ -50,7 +50,6 @@
     "welcome_title": "Welcome back",
     "welcome_subtitle": "Enter your mobile number to continue",
     "consent": "I agree to receive OTP on this number.",
-    "consent_terms": "Terms apply.",
     "verify_title": "Verify OTP",
     "otp_prompt": "Enter the 6-digit code sent to",
     "resend_in": "Resend in {}s"

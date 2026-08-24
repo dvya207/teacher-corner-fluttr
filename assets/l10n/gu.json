@@ -50,7 +50,6 @@
     "welcome_title": "પુનઃ સ્વાગત છે",
     "welcome_subtitle": "ચાલુ રાખવા તમારો મોબાઇલ નંબર દાખલ કરો",
     "consent": "હું આ નંબર પર OTP મેળવવા સંમત છું.",
-    "consent_terms": "શરતો લાગુ.",
     "verify_title": "OTP ચકાસો",
     "otp_prompt": "મોકલેલો 6 અંકનો કોડ દાખલ કરો",
     "resend_in": "{} સેકંડમાં ફરી મોકલો"

@@ -50,7 +50,6 @@
     "welcome_title": "আবার স্বাগতম",
     "welcome_subtitle": "চালিয়ে যেতে আপনার মোবাইল নম্বর দিন",
     "consent": "আমি এই নম্বরে OTP পেতে সম্মত।",
-    "consent_terms": "শর্ত প্রযোজ্য।",
     "verify_title": "OTP যাচাই করুন",
     "otp_prompt": "পাঠানো ৬ সংখ্যার কোড দিন",
     "resend_in": "{} সেকেন্ডে আবার পাঠান"

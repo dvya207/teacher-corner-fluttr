@@ -400,7 +400,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         SizedBox(width: AppDimensions.spacing12),
         // Expanded, so the sentence wraps instead of overflowing at the font
-        // ceiling. Two spans, because only "Terms apply." is emphasised.
+        // ceiling.
         Expanded(
           child: Text.rich(
             TextSpan(
@@ -411,18 +411,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   : AppTypography.caption.copyWith(
                       color: AppColors.textDisabled,
                     ),
-              children: [
-                TextSpan(text: '${'auth.consent'.tr()} '),
-                TextSpan(
-                  text: 'auth.consent_terms'.tr(),
-                  style: AppTypography.caption.copyWith(
-                    color: _phoneFilled
-                        ? AppColors.skyBlue
-                        : AppColors.textDisabled,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+              // ONE SPAN NOW. "Terms apply." was a second, blue, semibold span
+              // beside this one and was removed on instruction. Kept as a
+              // RichText with a single child rather than collapsed to a Text so
+              // the disabled-state styling above still applies to the label as a
+              // whole, and so a second span can come back without restructuring.
+              children: [TextSpan(text: 'auth.consent'.tr())],
             ),
           ),
         ),
