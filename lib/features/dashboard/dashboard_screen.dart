@@ -133,7 +133,11 @@ class _LoadedState extends StatelessWidget {
                 label: 'dashboard.stat_classrooms'.tr(),
               ),
               TcHeroStatTile(
-                value: '${account?.programmeCount ?? 0}',
+                // The PROVIDER's count, not the account's: it is computed from
+                // the same authoritative classroom documents the cards below
+                // draw their programme chips from, so the header and the chips
+                // agree. See DashboardProvider.programmeCount.
+                value: '${dashboard.programmeCount}',
                 label: 'dashboard.stat_programmes'.tr(),
               ),
             ],

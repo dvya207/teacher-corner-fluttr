@@ -18,6 +18,7 @@ class ClassroomListItem {
     this.institutionName,
     this.studentCounter,
     this.programmeLabels = const [],
+    this.programmeIds = const [],
     this.isStemClub = false,
     this.hasAuthoritativeDoc = false,
   });
@@ -33,6 +34,15 @@ class ClassroomListItem {
   final int? studentCounter;
 
   final List<String> programmeLabels;
+
+  /// The ids behind [programmeLabels], in the same order and from the SAME
+  /// source, so the two can never describe different programmes.
+  ///
+  /// Carried alongside the labels because counting distinct programmes has to
+  /// be done by id: two programmes can share a display name, and a name is not
+  /// an identity. The dashboard's "N Programmes" is computed from these.
+  final List<String> programmeIds;
+
   final bool isStemClub;
 
   /// False when the teacher's document references a classroom whose real
@@ -55,9 +65,22 @@ class ClassroomListItem {
       return null;
     }
 
-    final programmes = full != null && full.programmes.isNotEmpty
+    // ONE source chosen, then both the labels and the ids read off it. Reading
+    // labels from the authoritative document and ids from the summary would let
+    // a chip say one thing while the count meant another — which is exactly the
+    // divergence this list is in the middle of.
+    //
+    // The authoritative document wins when it has programmes, because it is
+    // what the classroom itself says it runs. The teacher's denormalised copy
+    // can be stale: it currently names one programme for a classroom whose own
+    // document names two different ones.
+    final useAuthoritative = full != null && full.programmes.isNotEmpty;
+    final programmeLabels = useAuthoritative
         ? full.programmes.map((p) => p.label).toList()
         : ref.programmes.map((p) => p.label).toList();
+    final programmeIds = useAuthoritative
+        ? full.programmes.map((p) => p.programmeId).toList()
+        : ref.programmes.map((p) => p.programmeId).toList();
 
     return ClassroomListItem(
       classroomId: ref.classroomId,
@@ -73,7 +96,8 @@ class ClassroomListItem {
         ref.institutionName,
       ),
       studentCounter: full?.studentCounter,
-      programmeLabels: programmes,
+      programmeLabels: programmeLabels,
+      programmeIds: programmeIds,
       isStemClub: full?.isStemClub ?? ref.isStemClub,
       hasAuthoritativeDoc: full != null,
     );

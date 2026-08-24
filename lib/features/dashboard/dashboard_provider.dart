@@ -65,6 +65,28 @@ class DashboardProvider extends ChangeNotifier {
     return total;
   }
 
+  /// Distinct programmes across the teacher's classrooms, counted from the
+  /// AUTHORITATIVE classroom documents rather than the teacher record.
+  ///
+  /// WHY NOT `account.programmeCount`, which also counts distinct ids. Because
+  /// it counts them from the teacher's denormalised `classrooms` map, and that
+  /// map can be stale: in live data one classroom's entry names a single
+  /// programme while the classroom's own document names two different ones. The
+  /// header then read "2 Programmes" directly above cards displaying four
+  /// distinct programme names.
+  ///
+  /// A screen that contradicts itself is wrong whichever source is right, and
+  /// the chips are the half a teacher can see and check, so the count follows
+  /// them. It costs no extra reads: these documents are already loaded for the
+  /// student counts.
+  ///
+  /// DEGRADES PER ROW, not wholesale. [ClassroomListItem.merge] falls back to
+  /// the teacher record's copy for any classroom whose document did not load, so
+  /// one failed read costs that row's accuracy rather than the whole number.
+  int get programmeCount => {
+    for (final classroom in _classrooms) ...classroom.programmeIds,
+  }.length;
+
   /// Localisation key, not a sentence. Same reasoning as AuthProvider.
   String? get errorKey => _errorKey;
 
