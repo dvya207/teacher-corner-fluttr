@@ -21,6 +21,7 @@ class FakeFirestoreService extends FirestoreService {
     this.teacher,
     this.profile,
     this.teachersByUid,
+    this.teachersByPhone,
     this.profilesByUid,
     this.classroomsByUid,
     this.classrooms = const [],
@@ -54,6 +55,10 @@ class FakeFirestoreService extends FirestoreService {
   /// [teacher] field cannot express "this uid gets nothing", which is the case
   /// most likely to regress into showing the previous teacher's data.
   final Map<String, Teacher>? teachersByUid;
+
+  /// Teaching records keyed by SUBSCRIBER DIGITS, for the phone fallback: a
+  /// record an admin registered that no web sign-in has stamped a uid onto.
+  final Map<String, Teacher>? teachersByPhone;
 
   /// Per-uid `users/{uid}` documents. Same precedence rule as [teachersByUid].
   final Map<String, TeacherProfile>? profilesByUid;
@@ -107,17 +112,34 @@ class FakeFirestoreService extends FirestoreService {
   final List<String> requestedProgrammeIds = [];
   int workflowReads = 0;
   final List<String> requestedUids = [];
+  final List<String?> requestedPhoneNumbers = [];
   final List<String> requestedProfileUids = [];
 
   @override
-  Future<Teacher?> fetchTeacher(String uid) async {
+  Future<Teacher?> fetchTeacher(String uid, {String? phoneNumber}) async {
     teacherReads++;
     requestedUids.add(uid);
+    requestedPhoneNumbers.add(phoneNumber);
     if (gate != null) await gate!.future;
     if (throws != null) throw throws!;
     // An unlisted uid gets NULL, never a fallback to `teacher`. A fake that fell
     // back would hide exactly the bug these tests exist to catch.
-    if (teachersByUid != null) return teachersByUid![uid];
+    if (teachersByUid != null) {
+      final byUid = teachersByUid![uid];
+      if (byUid != null) return byUid;
+      // Mirrors the real fallback: match unlinked records on the subscriber
+      // digits, and never one already stamped with somebody else's uid.
+      final digits = Teacher.subscriberDigits(phoneNumber);
+      if (digits == null) return null;
+      for (final candidate in (teachersByPhone ?? const {}).entries) {
+        if (candidate.key != digits) continue;
+        final stamped = candidate.value.uid;
+        if (stamped == null || stamped.isEmpty || stamped == uid) {
+          return candidate.value;
+        }
+      }
+      return null;
+    }
     return teacher;
   }
 
@@ -239,6 +261,7 @@ class FakeFirestoreService extends FirestoreService {
 class StubAuthProvider extends AuthProvider {
   StubAuthProvider({
     this.stubUid = 'uid_1',
+    this.stubPhoneNumber,
     this.stubAccount,
     LoginStage stubStage = LoginStage.phoneEntry,
     this.stubBusy = false,
@@ -247,6 +270,7 @@ class StubAuthProvider extends AuthProvider {
   }) : _stubStage = stubStage;
 
   final String? stubUid;
+  final String? stubPhoneNumber;
   final TeacherAccount? stubAccount;
   final LoginStage _stubStage;
   final bool stubBusy;
@@ -255,6 +279,9 @@ class StubAuthProvider extends AuthProvider {
 
   @override
   String? get uid => stubUid;
+
+  @override
+  String? get phoneNumber => stubPhoneNumber;
 
   @override
   bool get isAuthenticated => stubUid != null;

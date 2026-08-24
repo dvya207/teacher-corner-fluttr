@@ -36,6 +36,11 @@ class DashboardProvider extends ChangeNotifier {
   List<ClassroomListItem> _classrooms = const [];
   String? _errorKey;
   String? _uid;
+
+  /// Held so [retry] can redo the same lookup. The phone is half of how a
+  /// teaching record is found, so retrying with only the uid would quietly fail
+  /// for every teacher the web app has not linked.
+  String? _phoneNumber;
   bool _inFlight = false;
   bool _disposed = false;
 
@@ -112,10 +117,11 @@ class DashboardProvider extends ChangeNotifier {
   /// first await. Without that, a second teacher signing in on the same device
   /// would see the first one's name, school and classrooms for as long as their
   /// own read took.
-  Future<void> load(String uid) async {
+  Future<void> load(String uid, {String? phoneNumber}) async {
     if (_uid == uid && _status != DashboardStatus.error) return;
     if (_uid != uid) _clear();
     _uid = uid;
+    _phoneNumber = phoneNumber;
     await _fetch();
   }
 
@@ -131,6 +137,7 @@ class DashboardProvider extends ChangeNotifier {
     if (_uid == null && _status == DashboardStatus.loading) return;
     _clear();
     _uid = null;
+    _phoneNumber = null;
     _notify();
   }
 
@@ -167,8 +174,9 @@ class DashboardProvider extends ChangeNotifier {
     final requestedUid = _uid!;
 
     try {
-      final account =
-          await _firestore.fetchTeacherAccount(requestedUid).timeout(_timeout);
+      final account = await _firestore
+          .fetchTeacherAccount(requestedUid, phoneNumber: _phoneNumber)
+          .timeout(_timeout);
       if (_uid != requestedUid) return;
       _account = account;
       final classrooms = await _loadClassrooms(account);

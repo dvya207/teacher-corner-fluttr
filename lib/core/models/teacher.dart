@@ -65,10 +65,34 @@ class Teacher {
   /// exist in this database.
   static const String collection = 'teachers';
 
-  /// The field path the uid lives at, and the ONLY way to find a teacher from a
-  /// signed-in session. A dotted path, so it queries the nested map rather than
-  /// a top-level field.
+  /// The field path the uid lives at. A dotted path, so it queries the nested
+  /// map rather than a top-level field.
   static const String uidFieldPath = 'teacherMeta.uid';
+
+  /// The two field paths the subscriber digits live at.
+  ///
+  /// BOTH, because the web app writes both with the same value and a document
+  /// imported from ThinkTac production may carry only one. Firestore cannot OR
+  /// across two fields in one query, so a caller tries them in turn.
+  static const String phoneNumberFieldPath = 'teacherMeta.phoneNumber';
+  static const String phoneFieldPath = 'teacherMeta.phone';
+
+  /// The subscriber digits from an E.164 number, or null when there are none.
+  ///
+  /// `+919999900000` -> `9999900000`. Needed because Firebase Auth reports E.164
+  /// while `teacherMeta` stores the subscriber digits with the dial code held
+  /// separately in `countryCode`, so the two cannot be compared directly.
+  ///
+  /// Strips a leading `+` and then, if what remains is longer than ten digits,
+  /// the country code in front of the last ten. Ten is the length of every
+  /// number this programme issues; a shorter or non-numeric value yields null
+  /// rather than a guess, because a wrong guess here would match the wrong
+  /// teacher's record.
+  static String? subscriberDigits(String? e164) {
+    final raw = (e164 ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+    if (raw.length < 10) return null;
+    return raw.substring(raw.length - 10);
+  }
 
   /// Parses a `teachers/{docId}` document.
   ///

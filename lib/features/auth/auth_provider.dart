@@ -89,6 +89,14 @@ class AuthProvider extends ChangeNotifier {
 
   String? get uid => _user?.uid;
 
+  /// The signed-in teacher's number in E.164, or null when the account has none.
+  ///
+  /// NOT [pendingPhoneNumber], which is the number a code was last SENT to and
+  /// is empty on a restored session. This is the number on the Auth record, and
+  /// it is what finds a teaching record the web app has never linked. See
+  /// `FirestoreService.fetchTeacher`.
+  String? get phoneNumber => _user?.phoneNumber;
+
   /// Both halves of the signed-in teacher, or null when the load has not
   /// finished or failed outright.
   ///
@@ -156,7 +164,10 @@ class AuthProvider extends ChangeNotifier {
   /// number yet — and is reported rather than papered over.
   Future<void> _loadTeacher(String uid) async {
     try {
-      _account = await _firestore.fetchTeacherAccount(uid);
+      _account = await _firestore.fetchTeacherAccount(
+        uid,
+        phoneNumber: _user?.phoneNumber,
+      );
     } catch (e) {
       _account = null;
       debugPrint('AuthProvider: teacher account load failed: $e');

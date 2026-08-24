@@ -31,8 +31,14 @@ class _ClassroomListScreenState extends State<ClassroomListScreen> {
     // Post-frame: load() notifies listeners, and notifying during build throws.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final uid = context.read<AuthProvider>().uid;
-      if (uid != null) context.read<ClassroomProvider>().load(uid);
+      final auth = context.read<AuthProvider>();
+      final uid = auth.uid;
+      if (uid != null) {
+        context.read<ClassroomProvider>().load(
+              uid,
+              phoneNumber: auth.phoneNumber,
+            );
+      }
     });
   }
 

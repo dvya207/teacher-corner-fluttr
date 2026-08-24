@@ -50,27 +50,83 @@ class FirestoreService {
     );
   }
 
-  /// The teaching record linked to [uid], or null when none is.
+  /// The teaching record for the signed-in teacher, by uid and then by phone
+  /// number.
   ///
-  /// A QUERY, NOT A DOCUMENT GET, and that is the single most important line in
-  /// this file. `teachers/{docId}` ids are allocated by the web app when an
-  /// admin registers a teacher, long before that person has an Auth account; the
-  /// uid is stamped into `teacherMeta.uid` the first time they sign in. So
-  /// `doc(uid).get()` does not merely fail, it succeeds and reports "does not
-  /// exist" for a teacher whose record is sitting right there under another id.
+  /// A QUERY, NOT A DOCUMENT GET. `teachers/{docId}` ids are allocated by the
+  /// web app when an admin registers a teacher, long before that person has an
+  /// Auth account, so `doc(uid).get()` does not merely fail: it succeeds and
+  /// reports "does not exist" for a teacher whose record is sitting right there
+  /// under another id.
   ///
-  /// `limit(1)`: one person should have one record. If the data ever carried two
-  /// linked to one uid, taking the first is a defensible reading and cheaper
-  /// than pretending the app can reconcile them.
-  Future<Teacher?> fetchTeacher(String uid) async {
-    final result = await _db
+  /// TWO LOOKUPS, AND THE SECOND ONE IS WHY THIS WORKS AT ALL.
+  ///
+  /// `teacherMeta.uid` is stamped by the WEB app's `linkSignedInUid`, which runs
+  /// on a WEB sign-in. A teacher an admin registers who then signs into THIS app
+  /// has never been through that code, so their record carries no uid and the
+  /// first query finds nothing — even though the record exists with their
+  /// classrooms on it. In live data six of seven records were unstamped; the one
+  /// that worked belonged to someone who happened to have used the web app.
+  ///
+  /// So when the uid finds nothing, the number is tried. That is the SAME key the
+  /// web app links on (`teacherMeta.phoneNumber ?? teacherMeta.phone`, compared
+  /// as subscriber digits), so this app is not inventing an identity rule, it is
+  /// applying the existing one at read time instead of at write time.
+  ///
+  /// ONLY AN UNLINKED RECORD IS ACCEPTED BY NUMBER, mirroring the web app's
+  /// "only fills a blank". A record already stamped with a DIFFERENT uid belongs
+  /// to somebody else — phone numbers get recycled — and matching it by number
+  /// would hand one teacher another's classrooms. That check is the whole safety
+  /// of the fallback.
+  ///
+  /// NOTHING IS WRITTEN. The uid could be stamped here to make later loads a
+  /// single indexed query, but that is a write into a collection this app only
+  /// reads, so the match is redone each sign-in instead.
+  Future<Teacher?> fetchTeacher(String uid, {String? phoneNumber}) async {
+    // 1. By uid. Exact, indexed, and correct for anyone the web app has linked.
+    //    limit(1): one person should have one record, and if the data ever
+    //    carried two, taking the first beats pretending this app can reconcile
+    //    them.
+    final byUid = await _db
         .collection(Teacher.collection)
         .where(Teacher.uidFieldPath, isEqualTo: uid)
         .limit(1)
         .get();
-    if (result.docs.isEmpty) return null;
-    final doc = result.docs.first;
-    return Teacher.fromMap(doc.id, doc.data());
+    if (byUid.docs.isNotEmpty) {
+      final doc = byUid.docs.first;
+      return Teacher.fromMap(doc.id, doc.data());
+    }
+
+    // 2. By number. Null digits means there is nothing to match on — a Google
+    //    sign-in with no phone attached — so stop rather than guess.
+    final digits = Teacher.subscriberDigits(phoneNumber);
+    if (digits == null) return null;
+
+    // Both field paths, in turn: the web app writes both with the same value,
+    // a production import may carry only one, and Firestore cannot OR across
+    // two fields in a single query.
+    for (final field in [Teacher.phoneNumberFieldPath, Teacher.phoneFieldPath]) {
+      final byPhone = await _db
+          .collection(Teacher.collection)
+          .where(field, isEqualTo: digits)
+          // Not limit(1): the first match on this number might be somebody
+          // else's already-linked record, which has to be skipped rather than
+          // returned. A handful is plenty for one number.
+          .limit(5)
+          .get();
+
+      for (final doc in byPhone.docs) {
+        final teacher = Teacher.fromMap(doc.id, doc.data());
+        final stamped = teacher.uid;
+        // Unlinked, or already this teacher's. Anything else is another
+        // person's record that happens to share a recycled number.
+        if (stamped == null || stamped.isEmpty || stamped == uid) {
+          return teacher;
+        }
+      }
+    }
+
+    return null;
   }
 
   /// Both halves of the signed-in teacher, in one call.
@@ -80,10 +136,13 @@ class FirestoreService {
   /// invent a policy for the gap, and every caller would invent a different one.
   /// Either read legitimately returning null is a separate matter, and is what
   /// [TeacherAccount.isLinked] and [TeacherAccount.isEmpty] report.
-  Future<TeacherAccount> fetchTeacherAccount(String uid) async {
+  Future<TeacherAccount> fetchTeacherAccount(
+    String uid, {
+    String? phoneNumber,
+  }) async {
     final results = await Future.wait([
       fetchTeacherProfile(uid),
-      fetchTeacher(uid),
+      fetchTeacher(uid, phoneNumber: phoneNumber),
     ]);
     return TeacherAccount(
       uid: uid,

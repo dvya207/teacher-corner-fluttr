@@ -28,6 +28,10 @@ class ClassroomProvider extends ChangeNotifier {
   String _query = '';
   String? _errorKey;
   String? _uid;
+
+  /// See the note on [DashboardProvider]: the phone is half of how a teaching
+  /// record is found, so it has to survive for [retry].
+  String? _phoneNumber;
   bool _inFlight = false;
   bool _disposed = false;
 
@@ -62,10 +66,11 @@ class ClassroomProvider extends ChangeNotifier {
   /// A DIFFERENT uid drops the previous teacher's rows synchronously, before the
   /// first await, so no part of one teacher's classroom list can be shown to
   /// another.
-  Future<void> load(String uid) async {
+  Future<void> load(String uid, {String? phoneNumber}) async {
     if (_uid == uid && _status != ClassroomListStatus.error) return;
     if (_uid != uid) _clear();
     _uid = uid;
+    _phoneNumber = phoneNumber;
     await _fetch();
   }
 
@@ -78,6 +83,7 @@ class ClassroomProvider extends ChangeNotifier {
     if (_uid == null && _status == ClassroomListStatus.loading) return;
     _clear();
     _uid = null;
+    _phoneNumber = null;
     _notify();
   }
 
@@ -125,7 +131,7 @@ class ClassroomProvider extends ChangeNotifier {
   }
 
   Future<List<ClassroomListItem>> _loadItems(String uid) async {
-    final teacher = await _firestore.fetchTeacher(uid);
+    final teacher = await _firestore.fetchTeacher(uid, phoneNumber: _phoneNumber);
     final refs = teacher?.classrooms ?? const <ClassroomRef>[];
     if (refs.isEmpty) return const [];
 

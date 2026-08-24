@@ -35,8 +35,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // and notifying while the tree is still building throws.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final uid = context.read<AuthProvider>().uid;
-      if (uid != null) context.read<DashboardProvider>().load(uid);
+      final auth = context.read<AuthProvider>();
+      final uid = auth.uid;
+      if (uid != null) {
+        context.read<DashboardProvider>().load(
+              uid,
+              phoneNumber: auth.phoneNumber,
+            );
+      }
     });
   }
 
