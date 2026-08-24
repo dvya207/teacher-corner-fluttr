@@ -146,7 +146,12 @@ class Classroom {
 
   final List<ClassroomProgramme> programmes;
 
-  static const String collection = 'Classrooms';
+  /// `classrooms`, LOWERCASE. This is the Teacher Corner web app's own
+  /// collection in `teacher-corner-dev`; the capitalised `Classrooms` is
+  /// ThinkTac PRODUCTION's name for the same thing and does not exist in this
+  /// database. The field names below happen to be identical in both, which is
+  /// deliberate on the web app's part, not a coincidence.
+  static const String collection = 'classrooms';
 
   bool get isStemClub => (type ?? '').toUpperCase() == 'STEM-CLUB';
 

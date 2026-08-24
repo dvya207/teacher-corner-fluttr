@@ -4,7 +4,10 @@ import '../firebase/firestore_ref.dart';
 import '../models/assignment_evidence.dart';
 import '../models/classroom.dart';
 import '../models/learning_unit.dart';
+import '../models/programme.dart';
 import '../models/teacher.dart';
+import '../models/teacher_account.dart';
+import '../models/teacher_profile.dart';
 import '../models/workflow.dart';
 import '../utils/safe_parse.dart';
 
@@ -31,16 +34,62 @@ class FirestoreService {
   /// without touching Firebase at all.
   late final FirebaseFirestore _db = _injected ?? db;
 
-  /// The signed-in teacher's profile, or null when no document exists.
+  /// The signed-in teacher's own profile: `users/{uid}`.
   ///
-  /// A missing document is a legitimate state, not an error: a Firebase Auth
-  /// user can exist before anyone has provisioned a teacher record against that
-  /// uid, which is exactly what happens on a freshly seeded database. Callers
-  /// degrade the profile rather than treating it as a failure.
-  Future<Teacher?> fetchTeacher(String uid) async {
-    final snap = await _db.collection(Teacher.collection).doc(uid).get();
+  /// A doc-by-id read, because here the uid genuinely IS the document id. Null
+  /// when no document exists, which happens for a teacher who has only ever
+  /// signed into this app: `users/{uid}` is written by the WEB app on sign-in
+  /// and this app never writes it.
+  Future<TeacherProfile?> fetchTeacherProfile(String uid) async {
+    final snap =
+        await _db.collection(TeacherProfile.collection).doc(uid).get();
     if (!snap.exists) return null;
-    return Teacher.fromMap(snap.id, snap.data() ?? const <String, dynamic>{});
+    return TeacherProfile.fromMap(
+      snap.id,
+      snap.data() ?? const <String, dynamic>{},
+    );
+  }
+
+  /// The teaching record linked to [uid], or null when none is.
+  ///
+  /// A QUERY, NOT A DOCUMENT GET, and that is the single most important line in
+  /// this file. `teachers/{docId}` ids are allocated by the web app when an
+  /// admin registers a teacher, long before that person has an Auth account; the
+  /// uid is stamped into `teacherMeta.uid` the first time they sign in. So
+  /// `doc(uid).get()` does not merely fail, it succeeds and reports "does not
+  /// exist" for a teacher whose record is sitting right there under another id.
+  ///
+  /// `limit(1)`: one person should have one record. If the data ever carried two
+  /// linked to one uid, taking the first is a defensible reading and cheaper
+  /// than pretending the app can reconcile them.
+  Future<Teacher?> fetchTeacher(String uid) async {
+    final result = await _db
+        .collection(Teacher.collection)
+        .where(Teacher.uidFieldPath, isEqualTo: uid)
+        .limit(1)
+        .get();
+    if (result.docs.isEmpty) return null;
+    final doc = result.docs.first;
+    return Teacher.fromMap(doc.id, doc.data());
+  }
+
+  /// Both halves of the signed-in teacher, in one call.
+  ///
+  /// The two reads run CONCURRENTLY because neither depends on the other, and
+  /// they FAIL TOGETHER: a caller that got one and not the other would have to
+  /// invent a policy for the gap, and every caller would invent a different one.
+  /// Either read legitimately returning null is a separate matter, and is what
+  /// [TeacherAccount.isLinked] and [TeacherAccount.isEmpty] report.
+  Future<TeacherAccount> fetchTeacherAccount(String uid) async {
+    final results = await Future.wait([
+      fetchTeacherProfile(uid),
+      fetchTeacher(uid),
+    ]);
+    return TeacherAccount(
+      uid: uid,
+      profile: results[0] as TeacherProfile?,
+      teaching: results[1] as Teacher?,
+    );
   }
 
   /// The authoritative classroom document, or null when it does not exist.
@@ -69,6 +118,23 @@ class FirestoreService {
     if (ids.isEmpty) return const [];
     final results = await Future.wait(ids.map(fetchClassroom));
     return results.whereType<Classroom>().toList();
+  }
+
+  /// One programme from the catalogue, or null when the document does not
+  /// exist.
+  ///
+  /// A classroom's `programmes` map can name a programme whose catalogue entry
+  /// has since been removed, so "referenced but absent" is a state the caller
+  /// handles rather than an impossibility. The classroom screens do not need
+  /// this read at all — they carry a denormalised name — so it is paid for only
+  /// when a teacher opens the programme itself.
+  Future<Programme?> fetchProgramme(String programmeId) async {
+    final snap = await _db
+        .collection(Programme.collection)
+        .doc(programmeId)
+        .get();
+    if (!snap.exists) return null;
+    return Programme.fromMap(snap.id, snap.data() ?? const <String, dynamic>{});
   }
 
   /// A learning unit, shared across classrooms.
@@ -115,13 +181,28 @@ class FirestoreService {
 
   // ── Evidence ───────────────────────────────────────────────────────────────
 
+  /// `users/{uid}/submissions/{classroomId}-{programmeId}`.
+  ///
+  /// UNDER `users`, NOT `teachers`, for two independent reasons.
+  ///
+  /// CORRECTNESS. `teachers/{docId}` is not keyed by uid, so there is no
+  /// `teachers/{uid}` to nest under; writing one would create a junk top-level
+  /// document in a collection a live app reads.
+  ///
+  /// AUTHORISATION. The web app's deployed rules already grant
+  /// `users/{uid}/{document=**}` to that uid and nobody else, so this path needs
+  /// NO rules change and NO deploy from this repo. The web app itself documents
+  /// this shape as the intended home for anything private to one teacher
+  /// (`userSubcollection` in its `firestore-paths.ts`). Nothing the web app uses
+  /// is touched: it has no submissions, no evidence and no Storage wiring at
+  /// all, which was verified before choosing this location.
   DocumentReference<Map<String, dynamic>> _submissionDoc({
     required String uid,
     required String classroomId,
     required String programmeId,
   }) =>
       _db
-          .collection(Teacher.collection)
+          .collection(TeacherProfile.collection)
           .doc(uid)
           .collection(AssignmentEvidence.submissionsSubcollection)
           .doc(AssignmentEvidence.documentId(

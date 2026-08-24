@@ -248,6 +248,147 @@ what it would write, with no credentials. The seed is the one piece of this
 project that cannot be unit tested, and its last line is the check that matters:
 any Storage path referenced in Firestore with no object behind it.
 
+## The native launch window, and why it is not the Flutter splash
+
+`SplashScreen` was never the first thing a teacher sees. Before Flutter draws a
+frame the OS paints `LaunchTheme`'s window, and the template left that as
+`?android:colorBackground`, i.e. white. So a cold start read as white flash, then
+navy. On a real Redmi the flash is clearly visible.
+
+The fix paints that window navy with the logo centred, so the handover into
+`SplashScreen` is invisible. Three things are worth knowing about it:
+
+**The launch screen is deliberately not held open.** `SplashScreen` still leaves
+the moment `authLoaded` flips, with no minimum duration, for the reason already
+in its doc comment. Branding the window removes the flash without adding a
+fixed tax to every launch.
+
+**On this phone the legacy drawable is not what shows.** minSdk is 24 but
+targetSdk is 36, and from API 31 the system SplashScreen API supersedes
+`windowBackground`. `windowSplashScreenBackground` and
+`windowSplashScreenAnimatedIcon` in `values-v31` are what an Android 12+ device
+actually renders; `launch_background` now only covers the gap between the system
+splash exiting and Flutter's first frame, and pre-31 devices.
+
+**`values-night-v31` exists for a resource-resolution reason, not a design one.**
+Android ranks the `night` qualifier above the `vNN` qualifier, so `values-night`
+alone would shadow `values-v31` on a dark-mode phone and silently drop the
+splash attributes back to the un-branded default. Both twins are needed. The
+navy is intentionally identical in light and dark, because the brand gradient
+`SplashScreen` paints does not vary by theme either.
+
+The logo is checked in as two VectorDrawables converted from
+`assets/images/thinktacLogo_white.svg`: `tc_launch_logo` bare, for the layer-list
+that sizes it explicitly, and `tc_splash_icon` padded into a square canvas at 70%
+for the API 31+ icon slot, which sizes and may mask the drawable itself. The
+conversion was a one-shot script rather than a build step: the SVG is five paths
+of M/C/S/L/Z, all of which `pathData` accepts verbatim, the logo changes about
+never, and a checked-in XML is reviewable where a build-time rasteriser is not.
+
+The brand navy is now written in two places, `AppColors.navyDark` and
+`@color/tc_launch_navy`, because Android resources cannot read a Dart token.
+`values/colors.xml` says so; if they drift, the flash comes back.
+
+## Off Firebase phone auth, onto Exotel through Cloud Functions
+
+PLAN.md says to use stock Firebase phone auth and explicitly NOT to copy what
+production does. That instruction is now overridden, on Divya's call, for a
+concrete reason rather than a preference: on a real handset Firebase refused the
+send outright.
+
+```
+E FirebaseAuth: [SmsRetrieverHelper] SMS verification code request failed:
+  unknown status code: 17006 SMS unable to be sent until this region
+  enabled by the app developer.
+```
+
+17006 is the SMS region policy on `helix-staging-india`, which does not include
+India. Play Integrity passed and the app was configured correctly; the request
+never reached a carrier. Enabling India on a shared staging project is not this
+repo's decision to make, and the reason production went to Exotel in the first
+place is exactly the Indian SMS delivery regulation PLAN.md alludes to. So the
+slice now signs in the way production does.
+
+**The functions are a fork, not a copy in spirit only.** `functions-otp/` came
+from `~/code/teacher-corner/functions-otp`, which is deployed and working, and
+that original is untouched. Three things keep them apart, and all three are
+load-bearing on a project that hosts several apps:
+
+- **Function names.** `tcDivyaSendOtp` / `tcDivyaVerifyOtp`, not `tcDev*`.
+  Function names are per-project, so reusing the web app's names would have
+  overwritten live functions.
+- **Codebase.** `divya-otp` in `firebase.json`. The CLI only ever considers
+  same-codebase functions for deletion, which puts the web app's `tcdev-otp`
+  pair and the unlabelled `sendWelcomeEmail` / `expenseLogTotals` structurally
+  out of reach of a deploy from here. This must never be changed to `default`.
+- **Database.** `divya-teacher-corner`, so the OTP challenges and, more
+  importantly, the rate-limit counters are ours and not shared with the web app.
+
+The Exotel credentials are the SAME two Secret Manager secrets. Binding a secret
+to a new function grants read access; it does not alter the secret or any
+function already bound to it. `.env` and `.secret.local` carried over and are
+gitignored in the fork, as they were in the original: `TEST_PHONES` holds real
+handset numbers and belongs in neither repo.
+
+**`OTPVerifications` is closed to clients in both directions.** The functions
+write it through the Admin SDK, which bypasses rules, so nothing is lost. Read
+access would hand out the salt and hash for any number an attacker names, which
+turns a five-attempt server-side cap into an offline brute force of a six-digit
+space. Write access would let a caller reset the send counters that are the only
+thing bounding spend on an Exotel account whose credentials cannot be rotated.
+
+**The client barely changed shape.** `AuthProvider` keeps its entire public
+surface, so the login screen and every test that drives it were unaffected.
+`verifyPhoneNumber` and the credential dance are gone; in their place two
+callables and `signInWithCustomToken`. `authStateChanges()` is still the single
+writer of the signed-in state, which was the property worth preserving.
+
+**`tools/seed.js` takes `--phone` now.** Under this flow the Auth user is created
+by `tcDivyaVerifyOtp` on the first successful verify, so the uid exists but
+nobody has told you what it is. The seed resolves it through the Admin SDK
+rather than asking you to copy it out of the console.
+
+## The profile page, and what was left off it
+
+Built to the approved mockup, minus three things.
+
+**Notifications is gone** because Divya asked for it to go. **Offline Mode is
+also gone**, which was not asked for either way: it was not in the list of what
+to keep, and it is the one control on that page that would have to do something
+real rather than store a flag. Nothing in this slice implements offline
+behaviour, so a switch that only remembered its own position would be a lie told
+in the UI. Both are a few lines to restore.
+
+**The language row is two chips, not eleven.** The mockup shows the production
+app's full set. This app ships `en.json` and `hi.json`, so the row is built from
+`kSupportedLocales` in `core/l10n/locales.dart`, which is also what `main.dart`
+configures EasyLocalization from. Nine chips that switch to a language with no
+strings behind them is worse than two that work, and the row grows on its own
+when another JSON lands.
+
+**`context.locale` is not used, deliberately.** It expands to
+`EasyLocalization.of(context)!.locale`, and the test harness loads translations
+through `Localization.load` without ever mounting that widget, so the screen
+threw in every widget test while working fine in the app. The screen asks the
+provider and falls back to `Localizations.localeOf`, and the chip comparison is
+by language code because a resolved locale can carry a country (`en_US`) that our
+list does not.
+
+Two layout bugs the goldens caught, neither of which a passing unit test would
+have: `CrossAxisAlignment.stretch` on the stats row asserts "BoxConstraints
+forces an infinite height" inside a scroll view, now bounded with
+`IntrinsicHeight`; and a half-width stat card leaves about 66px for its label
+where "Classrooms" needs 75, so it rendered as "Classroom / s" until the tile and
+gap were tightened.
+
+## The splash hold is 30 seconds
+
+On Divya's explicit instruction, `kSplashMinimumDisplay` is 30 seconds. The cost
+is recorded here rather than argued: it is paid on EVERY launch, warm ones
+included, by a teacher standing in front of a class who wants the activity on
+screen. It is also long enough that a teacher may reasonably conclude the app has
+hung and force-close it. It is one constant in `core/splash_gate.dart`.
+
 ## Still unverified
 
 Everything below has only ever run against fakes. Listed so it is not mistaken
@@ -265,3 +406,103 @@ for done:
   three Storage uploads have actually happened.
 - The Firestore rules, which are written and dry-run but not deployed.
 - Rotation and font scaling on real hardware rather than a test surface.
+
+---
+
+## The repoint: from my own database to the web app's
+
+The app read a database I owned and seeded, `divya-teacher-corner`. It now reads
+`teacher-corner-dev`, which the live Angular Teacher Corner web app owns. The
+brief was one source of truth for a teacher instead of a seeded copy of one.
+
+**It was not a config change, and believing it was would have shipped a silently
+broken app.** Both databases sit in one Firebase project, both call their data
+teachers / classrooms / programmes / learning units, and both consciously mirror
+ThinkTac production's field names. Four things were still incompatible, and none
+of them fails loudly:
+
+**One. The collection names differ by case.** `Teachers` against `teachers`.
+Production capitalises, the web app does not. A wrong case is not an error in
+Firestore, it is an empty result.
+
+**Two. The teacher document is not keyed by the uid, and I had built on the
+assumption that it was.** `SCHEMA.md` said `Teachers/{uid}` and it was right
+about production. In `teacher-corner-dev` an admin registers a teacher before that
+person has an Auth account at all, so the document id is allocated then and the
+uid arrives later, stamped into `teacherMeta.uid` on first sign-in. So
+`doc(uid).get()` succeeds and reports "does not exist" for a teacher whose record
+is sitting right there under another id. That one line was the whole repoint:
+`fetchTeacher` had to become a query. I would not have found it by reading my own
+code, only by reading the other repo's `firestore-paths.ts` and its
+`linkSignedInUid`.
+
+**Three. One person is two documents.** `users/{uid}` is who is signed in;
+`teachers/{docId}` is what they teach. Neither alone renders the dashboard, so
+`TeacherAccount` joins them at the service boundary rather than leaving four
+providers to each remember which half answers which question. The profile wins
+identity because the teacher controls it; the record wins teaching because it is
+the only one that carries it. **They disagree in the live data** — the profile
+says one name and the teaching record another — which is exactly why the rule had
+to be written down rather than decided per screen.
+
+**Four. Two collections I depend on are not there.** `workflows` does not exist
+in that database at all, and `learningUnits` exists with zero documents. So
+screens 1 to 4 work against real data and the learning unit screen lands on
+`MissingWorkflowScreen` every time. That screen already existed, which is the
+first time defensive work has paid for itself without being asked to.
+
+### The thing I got wrong before I started
+
+I assumed I would have to write rules for the shared database, and nearly
+proposed deploying them. That would have been the single most destructive
+possible action: **a Firestore rules deploy replaces a database's entire ruleset
+rather than merging into it**, so deploying mine would have revoked the live web
+app's own access to its own data. Reading its rules first showed the deploy was
+not merely dangerous, it was unnecessary — its ruleset already grants every
+signed-in user read on the four shared collections, and grants
+`users/{uid}/{document=**}` to that uid, which is why evidence went there. The
+right move was the opposite of writing rules: **delete this repo's
+`firestore.rules` and remove the `firestore` block from `firebase.json`**, so a
+deploy from here has nothing to target and fails instead of succeeding.
+
+Generalising: when the obvious next step is a deploy that replaces shared state,
+check whether the permission you need already exists before writing the thing
+that would overwrite it.
+
+### Seeding had to become impossible, not just discouraged
+
+`tools/seed.js` used the Admin SDK, which **bypasses security rules entirely**.
+Every `allow write: if false` that makes this app a read consumer applies to the
+client and does nothing to a script holding a service account. And `set()` on a
+fixed document id is an overwrite, so "safe to re-run" would have become
+"reliably destructive" the moment a fixture id collided with a real one. Both
+scripts now refuse to run and say why. A comment would not have been enough,
+because the failure mode is somebody running the file, not reading it.
+
+### What the live data taught me that the schema did not
+
+- `teacherMeta` has no `institutionName` at all. The school is denormalised onto
+  each classroom entry instead, so `Teacher.institutionName` falls back to the
+  first classroom that names one. Reading only the meta left the dashboard
+  subtitle blank against real data.
+- A classroom entry's `programmes` is an **array**, where production's is a map
+  keyed by id. `KeyedEntries` already tolerated it. This is the second time that
+  primitive has absorbed a shape difference I did not anticipate, which is an
+  argument for writing it before the second parser rather than after.
+- `grade` is a string, and not always numeric: `'9'`, but also
+  `'Pre-primary 2'`. The `int?`-with-null-meaning-no-grade decision, made for
+  production's `"ET"`, handled it unchanged.
+- The teacher's denormalised classroom copy and the authoritative classroom
+  document **disagree about which programmes a classroom runs**. The list shows
+  one set and the detail screen another. That is drift in live data, written by
+  the web app's own flows, and it is not this app's to repair: fixing it would
+  mean writing to a collection I am a read consumer of.
+
+### What I would do differently
+
+Write the compatibility audit before touching a line. Which project, which
+database id, the target's authoritative path module, every collection I read and
+whether it exists under that exact name, how my primary key relates to their
+document id, and whether their rules already permit me. Six of those seven
+questions have answers that fail silently if I guess wrong, and I only learned
+that by nearly guessing.

@@ -211,7 +211,20 @@ class Workflow {
   /// Already sorted by [WorkflowStep.sequenceNumber]. See [fromMap].
   final List<WorkflowStep> steps;
 
-  static const String collection = 'Workflows';
+  /// `workflows`, lowercase, to match the web app's naming convention for
+  /// every other collection in `teacher-corner-dev`.
+  ///
+  /// THIS COLLECTION DOES NOT EXIST IN THAT DATABASE. The web app has no
+  /// workflow feature: its classroom programme entries carry `workflowIds`
+  /// rows with a `workflowId` string, but there is nothing for those strings to
+  /// point at. A read therefore returns "does not exist", which
+  /// `FirestoreService.fetchWorkflow` already reports as null and which the
+  /// learning unit route already renders as [MissingWorkflowScreen].
+  ///
+  /// That is the intended behaviour for now, not a bug to work around. Naming
+  /// the collection in the convention the database uses means the day workflows
+  /// land there, this starts working with no code change.
+  static const String collection = 'workflows';
 
   /// The step where photo evidence is captured, or null when this workflow has
   /// no upload step.

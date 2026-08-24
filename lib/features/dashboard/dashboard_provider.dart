@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../core/models/classroom_ref.dart';
-import '../../core/models/teacher.dart';
+import '../../core/models/teacher_account.dart';
 import '../../core/services/firestore_service.dart';
 import '../classrooms/classroom_list_item.dart';
 
@@ -32,7 +32,7 @@ class DashboardProvider extends ChangeNotifier {
   final Duration _timeout;
 
   DashboardStatus _status = DashboardStatus.loading;
-  Teacher? _teacher;
+  TeacherAccount? _account;
   List<ClassroomListItem> _classrooms = const [];
   String? _errorKey;
   String? _uid;
@@ -40,7 +40,7 @@ class DashboardProvider extends ChangeNotifier {
   bool _disposed = false;
 
   DashboardStatus get status => _status;
-  Teacher? get teacher => _teacher;
+  TeacherAccount? get account => _account;
 
   /// The teacher's classrooms, merged with whichever authoritative documents
   /// were readable. Built from the summary alone when that second round of
@@ -68,19 +68,58 @@ class DashboardProvider extends ChangeNotifier {
   /// Localisation key, not a sentence. Same reasoning as AuthProvider.
   String? get errorKey => _errorKey;
 
-  /// True once a load has succeeded but the teacher has no document. Signed in,
-  /// nothing provisioned: a real state on a freshly seeded database, and not an
-  /// error the teacher can do anything about by retrying.
-  bool get hasNoProfile =>
-      _status == DashboardStatus.loaded && _teacher == null;
+  /// True once a load has succeeded but no `teachers` record is linked to this
+  /// uid.
+  ///
+  /// Signed in, and no admin has registered this phone number against a
+  /// classroom yet. A real state in `teacher-corner-dev`, not an error, and not
+  /// something Retry can fix — which is why the screen shows an explanation
+  /// rather than an error banner with a button.
+  ///
+  /// Deliberately NOT "the account is empty". A teacher can have a
+  /// `users/{uid}` profile with a name and a school and still have no teaching
+  /// record; the header shows what it has and this reports what is missing.
+  bool get isTeacherNotLinked =>
+      _status == DashboardStatus.loaded && !(_account?.isLinked ?? false);
 
   /// Loads once per uid. Called from the screen's initState, which fires on
   /// every rebuild of the route, so repeat calls for the same uid are ignored
   /// rather than refetching on every navigation back to the tab.
+  ///
+  /// A DIFFERENT uid drops the previous teacher's data SYNCHRONOUSLY, before the
+  /// first await. Without that, a second teacher signing in on the same device
+  /// would see the first one's name, school and classrooms for as long as their
+  /// own read took.
   Future<void> load(String uid) async {
     if (_uid == uid && _status != DashboardStatus.error) return;
+    if (_uid != uid) _clear();
     _uid = uid;
     await _fetch();
+  }
+
+  /// Forgets whoever was loaded. Called on every change of signed-in user,
+  /// including sign-out.
+  ///
+  /// THIS PROVIDER OUTLIVES THE SCREEN. It is created above the router, so it
+  /// survives a sign-out and is still holding the previous teacher's data when
+  /// the next one arrives. [load] clearing on a uid change is not enough on its
+  /// own: the dashboard's first frame renders BEFORE its post-frame callback
+  /// calls load, so without this reset that frame shows the wrong teacher.
+  void reset() {
+    if (_uid == null && _status == DashboardStatus.loading) return;
+    _clear();
+    _uid = null;
+    _notify();
+  }
+
+  /// Back to the pre-load state. Loading rather than loaded-and-empty, because
+  /// "nothing has been asked for yet" must not render as "this teacher has
+  /// nothing".
+  void _clear() {
+    _account = null;
+    _classrooms = const [];
+    _errorKey = null;
+    _status = DashboardStatus.loading;
   }
 
   /// What the Retry button calls. Unlike [load] this always refetches, because
@@ -100,10 +139,19 @@ class DashboardProvider extends ChangeNotifier {
     _errorKey = null;
     _notify();
 
+    // The uid this attempt is for. Compared again after every await, so a slow
+    // read for a teacher who has since signed out cannot write their data over
+    // the one who signed in after them.
+    final requestedUid = _uid!;
+
     try {
-      final teacher = await _firestore.fetchTeacher(_uid!).timeout(_timeout);
-      _teacher = teacher;
-      _classrooms = await _loadClassrooms(teacher);
+      final account =
+          await _firestore.fetchTeacherAccount(requestedUid).timeout(_timeout);
+      if (_uid != requestedUid) return;
+      _account = account;
+      final classrooms = await _loadClassrooms(account);
+      if (_uid != requestedUid) return;
+      _classrooms = classrooms;
       _status = DashboardStatus.loaded;
     } on TimeoutException {
       _status = DashboardStatus.error;
@@ -125,8 +173,10 @@ class DashboardProvider extends ChangeNotifier {
   /// teacher's name, institution and counts, and all of that is already in hand
   /// by this point. A failure here costs the student total and the per-row
   /// counts; it must not cost the screen.
-  Future<List<ClassroomListItem>> _loadClassrooms(Teacher? teacher) async {
-    final refs = teacher?.classrooms ?? const <ClassroomRef>[];
+  Future<List<ClassroomListItem>> _loadClassrooms(
+    TeacherAccount? account,
+  ) async {
+    final refs = account?.classrooms ?? const <ClassroomRef>[];
     if (refs.isEmpty) return const [];
     try {
       final full = await _firestore

@@ -21,6 +21,16 @@ class TcHeroHeader extends StatelessWidget {
   final bool showBack;
   final VoidCallback? onBack;
   final Widget? trailing;
+
+  /// Drawn to the LEFT of the overline, title and subtitle, vertically centred
+  /// against them. The dashboard puts the ThinkTac mark here.
+  ///
+  /// A slot rather than a `showLogo` flag: this header is also used by the
+  /// classroom and programme screens, which want a back arrow in that corner
+  /// and no logo, and a boolean would have to grow a second one the first time
+  /// anything else needed the space.
+  final Widget? leading;
+
   final List<Widget> children;
 
   const TcHeroHeader({
@@ -32,6 +42,7 @@ class TcHeroHeader extends StatelessWidget {
     this.subtitle,
     this.showBack = false,
     this.onBack,
+    this.leading,
     this.trailing,
     this.children = const [],
   });
@@ -86,41 +97,59 @@ class TcHeroHeader extends StatelessWidget {
                     ?trailing,
                   ],
                 ),
-              if (overline != null) ...[
-                SizedBox(height: 8.h),
-                Text(
-                  overline!.toUpperCase(),
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.white.withValues(alpha: 0.65),
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
-              SizedBox(height: 4.h),
+              // The leading slot and the text block are laid out as one row, so
+              // the mark stays optically centred against the title however many
+              // lines the title wraps to.
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  if (leading != null) ...[
+                    leading!,
+                    SizedBox(width: 12.w),
+                  ],
                   Expanded(
-                    child: Text(
-                      title,
-                      style: AppTypography.heading1.copyWith(
-                        color: AppColors.white,
-                        fontSize: 24.sp,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (overline != null) ...[
+                          SizedBox(height: 8.h),
+                          Text(
+                            overline!.toUpperCase(),
+                            style: AppTypography.label.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.65),
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: 4.h),
+                        Text(
+                          title,
+                          style: AppTypography.heading1.copyWith(
+                            color: AppColors.white,
+                            fontSize: 24.sp,
+                          ),
+                        ),
+                        // INSIDE this column, with the overline and the title,
+                        // so all three share one left edge. Below the row it
+                        // aligned to the container instead, which put the
+                        // institution under the logo while the name sat
+                        // indented past it.
+                        if (subtitle != null) ...[
+                          SizedBox(height: 4.h),
+                          Text(
+                            subtitle!,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.75),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   if (trailing != null && breadcrumb == null && !showBack)
                     trailing!,
                 ],
               ),
-              if (subtitle != null) ...[
-                SizedBox(height: 4.h),
-                Text(
-                  subtitle!,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.white.withValues(alpha: 0.75),
-                  ),
-                ),
-              ],
               if (children.isNotEmpty) ...[
                 SizedBox(height: 16.h),
                 Row(

@@ -59,10 +59,35 @@ class ClassroomProvider extends ChangeNotifier {
     _notify();
   }
 
+  /// A DIFFERENT uid drops the previous teacher's rows synchronously, before the
+  /// first await, so no part of one teacher's classroom list can be shown to
+  /// another.
   Future<void> load(String uid) async {
     if (_uid == uid && _status != ClassroomListStatus.error) return;
+    if (_uid != uid) _clear();
     _uid = uid;
     await _fetch();
+  }
+
+  /// Forgets whoever was loaded, including their search text. Called on every
+  /// change of signed-in user. See the note on [DashboardProvider.reset]: this
+  /// provider is created above the router and outlives the screen, so the reset
+  /// is what stops the next teacher's first frame rendering the previous one's
+  /// classrooms.
+  void reset() {
+    if (_uid == null && _status == ClassroomListStatus.loading) return;
+    _clear();
+    _uid = null;
+    _notify();
+  }
+
+  void _clear() {
+    _all = const [];
+    // The query goes too. A leftover search term is the previous teacher's
+    // input, and it would silently hide rows for the next one.
+    _query = '';
+    _errorKey = null;
+    _status = ClassroomListStatus.loading;
   }
 
   Future<void> retry() async {
@@ -78,8 +103,13 @@ class ClassroomProvider extends ChangeNotifier {
     _errorKey = null;
     _notify();
 
+    final requestedUid = _uid!;
+
     try {
-      _all = await _loadItems(_uid!).timeout(_timeout);
+      final items = await _loadItems(requestedUid).timeout(_timeout);
+      // Discarded if the signed-in user changed while this was in flight.
+      if (_uid != requestedUid) return;
+      _all = items;
       _status = ClassroomListStatus.loaded;
     } on TimeoutException {
       _status = ClassroomListStatus.error;

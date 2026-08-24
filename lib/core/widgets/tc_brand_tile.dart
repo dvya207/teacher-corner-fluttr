@@ -35,3 +35,27 @@ class TcBrandTile extends StatelessWidget {
     );
   }
 }
+
+/// The white logo mark on its own, with no tile behind it.
+///
+/// Separate from [TcBrandTile] rather than a flag on it: the tile exists to give
+/// the mark contrast on the splash and the sign-in screen, where it sits alone
+/// on a large field of navy. In a header the mark sits next to text on the same
+/// navy, and a translucent square around it reads as a button the teacher can
+/// press. Two widgets, because they are two different jobs.
+class TcBrandMark extends StatelessWidget {
+  const TcBrandMark({super.key, this.size = 40});
+
+  /// Design-spec value; scaled with `.r` at build time, never at static init.
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      'assets/images/thinktacLogo_white.svg',
+      width: size.r,
+      height: size.r,
+      semanticsLabel: 'app.brand'.tr(),
+    );
+  }
+}

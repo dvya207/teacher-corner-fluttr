@@ -164,14 +164,17 @@ void main() {
     });
   });
 
-  group('signed in with nothing provisioned', () {
+  group('signed in with no teaching record linked', () {
     testWidgets('says so plainly instead of showing zeros as a failure', (
       tester,
     ) async {
       await pumpDashboard(tester, firestore: FakeFirestoreService());
 
+      // Names the ACTIONABLE fact: an administrator has to register this
+      // number. The old copy said the profile had not been "set up", which
+      // pointed the teacher at a setting that does not exist.
       expect(
-        find.textContaining('no teacher profile has been set up'),
+        find.textContaining('no teacher record is linked to this number'),
         findsOneWidget,
       );
       // Not the error state: retrying cannot fix it.

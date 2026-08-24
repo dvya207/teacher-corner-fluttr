@@ -1,14 +1,113 @@
 # Firestore shapes for the vertical slice
 
-Only the collections the slice needs. The production app touches 25; you need 4.
+## READ THIS FIRST: the database changed, and so did every collection name
 
-Every field below is what the real app reads. Where a field has two or three
-possible names, that is not a typo, the data was written by three different
-systems over several years and the app tolerates all of them. You should seed
-only the **preferred** name, but write your parsing so a missing field degrades
-instead of throwing.
+This app used to own a private database, `divya-teacher-corner`, seeded with
+fixtures. It no longer does. It now reads **`teacher-corner-dev`**, the live
+database owned by the Angular Teacher Corner web app in `~/code/teacher-corner`,
+so that there is ONE source of truth for a teacher rather than a seeded copy of
+one.
+
+Everything below the "Verified live" section documents the **ThinkTac
+production** shapes the parsers still tolerate. They are not what this app reads
+day to day. `teacher-corner-dev` is close to production but not identical, and
+the differences are the whole story.
+
+### What this app may and may not do
+
+| | |
+|---|---|
+| Reads | `users/{uid}`, `teachers`, `classrooms`, `programmes`, `learningUnits`, `workflows` |
+| Writes | `users/{uid}/submissions/*` and Storage under `activityEvidence/*`. **Nothing else.** |
+| Rules | Governed by `~/code/teacher-corner/firestore.rules`, deployed **only** from there. This repo has no `firestore.rules` and no `firestore` block in `firebase.json`, on purpose. |
+| Seeding | Disabled. `tools/seed.js` refuses to run. The Admin SDK bypasses rules, so a seed here would overwrite live documents. |
+
+### Collection names: lowercase here, capitalised in production
+
+| This app reads | ThinkTac production calls it | Exists in `teacher-corner-dev`? |
+|---|---|---|
+| `users/{uid}` | `Users/{uid}` | yes, and the doc id IS the Auth uid |
+| `teachers/{docId}` | `Teachers/{uid}` | yes, but **keyed differently** (see below) |
+| `classrooms/{id}` | `Classrooms/{id}` | yes, same field names |
+| `programmes/{id}` | `Programmes/{id}` | yes |
+| `learningUnits/{id}` | `LearningUnits/{id}` | collection exists, **0 documents** |
+| `workflows/{id}` | `Workflows/{id}` | **does not exist at all** |
+
+### THE UID RELATIONSHIP, which is the one thing to get right
+
+Two documents describe one person, and only one of them is keyed by the uid.
+
+```
+users/{uid}                     <- doc id IS the Firebase Auth uid.  DOC GET.
+teachers/{clientAllocatedId}    <- doc id is NOT the uid.            QUERY.
+  teacherMeta.uid: "<the Auth uid>"   <- stamped in on first sign-in
+```
+
+The web app allocates a `teachers` document id when an **admin registers** a
+teacher, which happens before that person has an Auth account at all. Their uid
+is written into `teacherMeta.uid` later, the first time they sign in with the
+registered number (`TeacherService.linkSignedInUid`). So:
+
+```dart
+// WRONG. Succeeds, and reports "does not exist" for a teacher whose
+// record is sitting right there under another id.
+db.collection('teachers').doc(uid).get()
+
+// RIGHT.
+db.collection('teachers').where('teacherMeta.uid', isEqualTo: uid).limit(1)
+```
+
+`teacherMeta.uid` being **absent** is a normal state, not corruption: it means
+nobody has registered that phone number yet. The app reports it as "no teacher
+record is linked to this number" and invents nothing.
+
+### Which document wins which question
+
+`users/{uid}` is authoritative for **identity** (name, school), because it is
+written from the teacher's own Auth record and their own profile form.
+`teachers/{docId}` is authoritative for **teaching** (classrooms, programmes),
+because it is the only one that carries them. `TeacherAccount` joins the two.
+
+They **do disagree in live data**. Both are read; the profile wins the name.
+
+### Verified live, in `teacher-corner-dev`
+
+Read-only, at the time of the repoint:
+
+```
+root collections   Configuration, OTPVerifications, classrooms,
+                   institutions, programmes, teachers, users
+                   (no workflows, no learningUnits documents)
+users              6 documents
+teachers           6 documents, exactly ONE with teacherMeta.uid set
+programmes         10 documents
+learningUnits      0 documents
+submissions        none anywhere; users/{uid} has no subcollections
+```
+
+Real differences from the production shapes documented below:
+
+- `teacherMeta` has **no `institutionName`** and **no `designation`**. The school
+  is denormalised onto each classroom entry instead, so `Teacher.institutionName`
+  falls back to the first classroom that names one.
+- `teacherMeta` carries **both** `phone` and `phoneNumber`, same digits, and the
+  dial code separately in `countryCode`.
+- A classroom entry's `programmes` is an **ARRAY**, not a map keyed by id.
+  `KeyedEntries` already tolerates both.
+- `grade` is a **string**, and not always numeric: `'9'`, but also
+  `'Pre-primary 2'`. It parses to `null`, which means "no grade", never zero.
+- `workflowIds` is **absent** on every classroom programme entry, so no classroom
+  currently names any activity.
+- `studentCounter` is `0` on every classroom. Zero is a fact here, not a missing
+  read.
 
 ---
+
+## The production shapes, which the parsers still tolerate
+
+Below is the original reference. The collection NAMES in these headings are
+production's capitalised ones and are **not** what this app queries; the field
+names inside are accurate for both, which is why the parsers work against either.
 
 ## `Teachers/{uid}`
 
@@ -108,7 +207,20 @@ plan before you do that in a list.
 
 ---
 
-## `Workflows/{workflowId}`
+## `workflows/{workflowId}`
+
+**THIS COLLECTION DOES NOT EXIST IN `teacher-corner-dev`.** The web app has no
+workflow feature. Its classroom programme entries have a `workflowIds` array
+whose rows carry a `workflowId`, but there is nothing for those strings to point
+at, and in the live data the array is absent anyway.
+
+A read therefore returns "does not exist", which `fetchWorkflow` reports as null
+and which the learning unit route renders as the missing-workflow screen. That is
+the intended behaviour, not a bug to work around. The constant is spelled
+lowercase to match the database's convention, so the day workflows land there
+this starts working with no code change.
+
+The shape below is production's, for whenever that happens.
 
 The ordered steps a teacher walks through in class.
 
@@ -147,13 +259,27 @@ seed them out of order once, on purpose, and make sure your UI still sorts right
 
 ---
 
-## `Teachers/{uid}/submissions/{classroomId}-{programmeId}`
+## `users/{uid}/submissions/{classroomId}-{programmeId}`
 
 Where evidence is recorded. One document per classroom+programme, with a map
 per assignment inside it.
 
+**UNDER `users`, NOT `teachers`, and this one is not production's shape.** Two
+reasons, both decisive:
+
+- `teachers/{docId}` is not keyed by uid, so there is no `teachers/{uid}` to nest
+  under. Writing one would add a junk top-level document to a collection the live
+  web app lists.
+- The web app's deployed rules already grant `users/{uid}/{document=**}` to that
+  uid and nobody else, so this path needs **no rules change and no deploy from
+  this repo**. Its own `firestore-paths.ts` documents this shape
+  (`userSubcollection`) as the intended home for anything private to one teacher.
+
+The web app has no submissions, no evidence and no Storage wiring of any kind,
+which was verified before choosing this location. Nothing it uses is touched.
+
 ```
-Teachers/lVjaw…bt42/submissions/cls_oak_7a-prog_tip_2026
+users/7vbKdBSqG3YRI6X1GzFNeQD24Rm1/submissions/0BjL4c151I9W3xZ34ZEP-96HxMlMZzyGhyh0vpQhl
   asg_mps_evidence: {
     displayName:  "Photo evidence"
     luId:         "lu_magnetic_pen_stand"

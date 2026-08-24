@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/tc_brand_tile.dart';
 import '../../core/widgets/tc_button.dart';
 import '../../core/widgets/tc_hero_header.dart';
 import '../../core/widgets/tc_hero_stat_tile.dart';
@@ -94,8 +95,8 @@ class _LoadedState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teacher = dashboard.teacher;
-    final name = teacher?.displayName ?? '';
+    final account = dashboard.account;
+    final name = account?.displayName ?? '';
 
     return SingleChildScrollView(
       // Scrollable so landscape and a maxed-out system font size push content
@@ -104,11 +105,20 @@ class _LoadedState extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           TcHeroHeader(
+            // The ThinkTac mark, top left. Only on the dashboard: the classroom
+            // and programme screens use that corner for the back arrow, and a
+            // logo on every screen is chrome rather than branding.
+            leading: const TcBrandMark(),
             overline: 'dashboard.greeting'.tr(),
             // Falls back to the greeting alone rather than rendering an empty
             // title or the word "null".
             title: name.isNotEmpty ? name : 'app.title'.tr(),
-            subtitle: teacher?.institutionName,
+            // NO SUBTITLE, deliberately. The institution used to sit under the
+            // name here and was removed on instruction: the greeting is about
+            // who the teacher is, and their school is already on every classroom
+            // card below, so repeating it in the header was noise. The header
+            // still resolves it for other screens, which do want it.
+
             children: [
               // Omitted when the total is not knowable, which happens when an
               // authoritative classroom document did not load. A partial sum
@@ -119,20 +129,20 @@ class _LoadedState extends StatelessWidget {
                   label: 'dashboard.stat_students'.tr(),
                 ),
               TcHeroStatTile(
-                value: '${teacher?.classroomCount ?? 0}',
+                value: '${account?.classroomCount ?? 0}',
                 label: 'dashboard.stat_classrooms'.tr(),
               ),
               TcHeroStatTile(
-                value: '${teacher?.programmeCount ?? 0}',
+                value: '${account?.programmeCount ?? 0}',
                 label: 'dashboard.stat_programmes'.tr(),
               ),
             ],
           ),
           TcHeroSheet(
-            child: dashboard.hasNoProfile
+            child: dashboard.isTeacherNotLinked
                 ? TcStatusBanner(
                     type: TcMsgType.info,
-                    message: 'dashboard.no_profile'.tr(),
+                    message: 'dashboard.not_linked'.tr(),
                   )
                 : _ClassroomShortcuts(classrooms: dashboard.classrooms),
           ),

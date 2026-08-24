@@ -4,7 +4,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../core/models/teacher.dart';
+import '../../core/models/teacher_account.dart';
 import '../../core/services/firestore_service.dart';
 
 /// Which half of the two-step phone flow the login form is showing.
@@ -69,7 +69,7 @@ class AuthProvider extends ChangeNotifier {
 
   bool _authLoaded = false;
   User? _user;
-  Teacher? _teacher;
+  TeacherAccount? _account;
   LoginStage _stage = LoginStage.phoneEntry;
   bool _busy = false;
   String? _errorKey;
@@ -89,9 +89,20 @@ class AuthProvider extends ChangeNotifier {
 
   String? get uid => _user?.uid;
 
-  /// The teacher's profile, or null when it has not loaded or does not exist.
-  /// Null here never means "not signed in": check [isAuthenticated] for that.
-  Teacher? get teacher => _teacher;
+  /// Both halves of the signed-in teacher, or null when the load has not
+  /// finished or failed outright.
+  ///
+  /// Null here NEVER means "not signed in": check [isAuthenticated] for that. It
+  /// also does not mean "unknown teacher" — an account that loaded with neither
+  /// document present is a non-null [TeacherAccount] reporting
+  /// [TeacherAccount.isEmpty], which is a different thing from not having
+  /// managed to ask.
+  TeacherAccount? get account => _account;
+
+  /// Whether a `teachers` record is linked to this sign-in. False both while
+  /// loading and when genuinely unlinked, so screens gate on
+  /// `account != null && !account!.isLinked` when they need to tell those apart.
+  bool get isTeacherLinked => _account?.isLinked ?? false;
 
   LoginStage get stage => _stage;
 
@@ -127,7 +138,7 @@ class AuthProvider extends ChangeNotifier {
     // that may be slow or may fail outright.
     _authLoaded = true;
     if (signedOut) {
-      _teacher = null;
+      _account = null;
       _resetFlow();
     }
     _notify();
@@ -137,12 +148,18 @@ class AuthProvider extends ChangeNotifier {
   /// A missing or unreadable teacher record must not block sign-in. The teacher
   /// is authenticated either way, and the dashboard degrades to showing less
   /// rather than showing an error the teacher cannot act on.
+  ///
+  /// Reads BOTH `users/{uid}` and the linked `teachers` record, because the
+  /// header needs the name from the first and the counts from the second. A
+  /// teacher who is signed in but not linked to a teaching record is a normal
+  /// state in `teacher-corner-dev` — it means no admin has registered their
+  /// number yet — and is reported rather than papered over.
   Future<void> _loadTeacher(String uid) async {
     try {
-      _teacher = await _firestore.fetchTeacher(uid);
+      _account = await _firestore.fetchTeacherAccount(uid);
     } catch (e) {
-      _teacher = null;
-      debugPrint('AuthProvider: teacher profile load failed: $e');
+      _account = null;
+      debugPrint('AuthProvider: teacher account load failed: $e');
     }
     _notify();
   }

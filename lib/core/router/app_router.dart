@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../features/auth/login_screen.dart';
 import '../../features/classrooms/classroom_detail_provider.dart';
+import '../../features/programmes/programme_detail_provider.dart';
 import '../../features/classrooms/classroom_detail_screen.dart';
+import '../../features/programmes/programme_detail_screen.dart';
 import '../../features/classrooms/classroom_list_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/learning_unit/learning_unit_provider.dart';
@@ -13,6 +15,7 @@ import '../../features/learning_unit/learning_unit_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../../features/shell/not_built_screen.dart';
+import '../../features/profile/help_guide_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../services/firestore_service.dart';
 
@@ -46,12 +49,17 @@ class AppRouter {
     required String location,
     required bool authLoaded,
     required bool isAuthenticated,
+    bool splashHoldElapsed = true,
   }) {
     // THREE states, not two: signed in, signed out, and not-yet-known.
     // Treating the third as "signed out" is what makes every cold start flash
     // the login screen before landing on the dashboard, so hold on the splash
     // until Firebase has actually answered.
-    if (!authLoaded) {
+    // The splash also holds for its own minimum window, so the branding is
+    // seen rather than flashed past when auth resolves in under 200ms. Both
+    // conditions land on the same branch: there is one reason to be on the
+    // splash, "we are not ready to route yet".
+    if (!authLoaded || !splashHoldElapsed) {
       return location == splash ? null : splash;
     }
 
@@ -71,6 +79,7 @@ class AppRouter {
     required Listenable refreshListenable,
     required bool Function() isAuthenticated,
     required bool Function() isAuthLoaded,
+    bool Function()? isSplashHoldElapsed,
   }) {
     return GoRouter(
       initialLocation: splash,
@@ -79,6 +88,7 @@ class AppRouter {
         location: state.matchedLocation,
         authLoaded: isAuthLoaded(),
         isAuthenticated: isAuthenticated(),
+        splashHoldElapsed: isSplashHoldElapsed?.call() ?? true,
       ),
       routes: [
         GoRoute(
@@ -114,6 +124,44 @@ class AppRouter {
                       child: ClassroomDetailScreen(classroomId: id),
                     );
                   },
+                  routes: [
+                    // /classrooms/:id/programmes/:programmeId
+                    //
+                    // NESTED, so back returns to the classroom rather than the
+                    // list, and the path itself records which classroom the
+                    // teacher came in through. The programme document is shared
+                    // across classrooms, so the classroom id is CONTEXT here,
+                    // not part of the programme's identity — it is used for the
+                    // breadcrumb and nothing else.
+                    //
+                    // Its own provider, created per route: a nested GoRoute
+                    // does not inherit the parent route's providers, and one
+                    // instance per programme means opening a second starts from
+                    // a clean load instead of briefly showing the first one's
+                    // name.
+                    GoRoute(
+                      path: 'programmes/:programmeId',
+                      builder: (context, state) {
+                        final programmeId =
+                            state.pathParameters['programmeId']!;
+                        return ChangeNotifierProvider<
+                            ProgrammeDetailProvider>(
+                          create: (ctx) => ProgrammeDetailProvider(
+                            firestore: ctx.read<FirestoreService>(),
+                          ),
+                          child: ProgrammeDetailScreen(
+                            programmeId: programmeId,
+                            // Passed through the query string rather than
+                            // re-read: the classroom screen already has the
+                            // name, and a read to render a breadcrumb would be
+                            // a whole round trip for one line of text.
+                            classroomName:
+                                state.uri.queryParameters['classroomName'],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -147,6 +195,10 @@ class AppRouter {
         // here, because which workflow runs for this unit is a property of the
         // CLASSROOM that opened it. A link without it is not resolvable, and
         // guessing one would silently walk the teacher through the wrong steps.
+        GoRoute(
+          path: '/help',
+          builder: (context, state) => const HelpGuideScreen(),
+        ),
         GoRoute(
           path: '/lu/:id',
           builder: (context, state) {

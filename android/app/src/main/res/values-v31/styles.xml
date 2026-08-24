@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 31+ replaces the windowBackground launch screen with the system
+         SplashScreen API, so the attributes below are what the phone actually
+         shows. windowBackground stays for the gap between the system splash
+         exiting and Flutter's first frame.
+
+         This file has a night twin because Android resolves the -night
+         qualifier at HIGHER precedence than -vNN: values-night alone would
+         shadow values-v31 on a dark-mode device and lose the splash entirely. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/tc_launch_navy</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/tc_splash_icon</item>
+        <item name="android:statusBarColor">@color/tc_launch_navy</item>
+        <item name="android:navigationBarColor">@color/tc_launch_navy</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

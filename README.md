@@ -75,19 +75,27 @@ looks like a key, token or password**, not in Dart, not in a config file, not
 There is no Android app registered in that project yet, so you are creating the
 first one. Give it a package name of your own: `com.thinktac.tc.divya`.
 
-## 5. Pick your own Firestore database
+## 5. The Firestore database: `teacher-corner-dev`, and it is not ours
 
-`helix-staging-india` has several named Firestore databases in it, including
-other people's work (`sidteachercorner`, `teacher-corner-dev`). **Create your
-own** in the Firebase Console. Firestore → the database dropdown → Create
-database, and name it something unambiguous like `divya-teacher-corner`.
-
-Then set it in one place:
+This app reads the **existing** Teacher Corner Dev database. It does not have one
+of its own any more.
 
 ```dart
 // lib/core/firebase/firestore_ref.dart
-const String kDatabaseId = 'divya-teacher-corner';
+const String kDatabaseId = 'teacher-corner-dev';
 ```
+
+`helix-staging-india` holds several named databases: `(default)`, `bugpulse`,
+`ezblog`, `sidteachercorner`, `divya-teacher-corner` and `teacher-corner-dev`.
+The last one belongs to the **live Angular Teacher Corner web app** in
+`~/code/teacher-corner`, and it holds real teachers, classrooms and programmes
+that real people are using. This app is a guest in it, so that a teacher's
+details have ONE source of truth rather than a seeded copy.
+
+`divya-teacher-corner` still exists and is no longer read or written by anything
+except the `tcDivya*` OTP functions' own `OTPVerifications` collection, which is
+deliberately kept out of the shared database. Do not point `kDatabaseId` back at
+it.
 
 **This is the single biggest trap in this project.** `FirebaseFirestore.instance`
 *always* talks to the `(default)` database. It does not error, it does not warn,
@@ -95,40 +103,74 @@ it just silently reads and writes the wrong place. Every query in this app must
 go through the `db` handle in `firestore_ref.dart`. If the Console shows nothing
 after a write that "succeeded", this is why.
 
-## 6. Seed some data
+### The three rules of being a guest
 
-You cannot build a data-driven app against an empty database.
+**1. Read only, except evidence.** The only thing this app writes is
+`users/{uid}/submissions/*` plus its Storage objects. Nothing here rewrites a
+teacher, a classroom, a programme or a learning unit.
 
-```bash
-cd tools && npm install firebase-admin && cd ..
-gcloud auth application-default login
-node tools/seed.js --database=divya-teacher-corner --uid=<your-auth-uid>
+**2. No rules deploy from this repo, ever.** There is no `firestore.rules` here
+and no `firestore` block in `firebase.json`, and both absences are deliberate.
+The rules governing this data live in `~/code/teacher-corner/firestore.rules` and
+are deployed only from there. A rules deploy **replaces** a database's whole
+ruleset rather than merging into it, so one careless `firebase deploy` from this
+directory could revoke the live web app's own access. With no block at all,
+`firebase deploy --only firestore` from here has nothing to target and fails
+instead of succeeding destructively.
+
+The app needs no rules change anyway: the web app's deployed ruleset already
+grants every signed-in user read on `classrooms`, `programmes`, `learningUnits`
+and `teachers`, and grants `users/{uid}/{document=**}` to that uid.
+
+**3. No seeding.** `tools/seed.js` and `tools/seed_dryrun.js` refuse to run. The
+Admin SDK **bypasses security rules**, so a seed here is not blocked by anything:
+`set()` on a fixed document id would overwrite a live document, and fixtures that
+did not collide would still add invented rows to collections the web app lists.
+
+## 6. Sign in, and where the data comes from
+
+There is nothing to seed. Sign in with the phone number an administrator has
+registered in the web app, and the app reads what is already there.
+
+The uid relationship is the one thing to understand, because getting it wrong
+fails **silently**:
+
+```
+users/{uid}                     <- doc id IS your Auth uid.  A DOC GET.
+teachers/{clientAllocatedId}    <- doc id is NOT your uid.   A QUERY on
+  teacherMeta.uid: "<your uid>"    teacherMeta.uid.
 ```
 
-Get your uid by signing in once and printing
-`FirebaseAuth.instance.currentUser!.uid`, or from Console → Authentication.
+An admin registers a teacher before that person has an Auth account, so the
+`teachers` document id is allocated then and the uid is stamped into
+`teacherMeta.uid` on their first sign-in. `doc(uid).get()` on `teachers` does not
+error, it cheerfully reports "does not exist".
 
-The seed is idempotent, re-run it as often as you like. It deliberately
-includes awkward data (a classroom whose `grade` is the string `"ET"`, one
-`workflowIds` as a list and one as a map) because the real data is like that and
-your parsing needs to survive it.
+If the dashboard shows **"no teacher record is linked to this number yet"**, that
+is the honest state and not a bug: no `teachers` document carries your uid.
+An administrator fixes it by registering your number against a classroom in the
+web app. Do not write fixtures to work around it.
 
-It also uploads the image fixtures the learning unit screen needs, because a
-Storage path in Firestore with no object behind it is not a fixture, it is a
-broken link that looks like an app bug. Those objects are namespaced by database
-id (`luImages/<your-db>/…`), since every developer's named database shares one
-Storage bucket in this project and an un-namespaced fixture would overwrite
-everyone else's. Add `--skip-storage` to seed Firestore only, for instance if
-you do not have write access to the bucket.
-
-To see exactly what the seed would write, with no credentials and no network:
+To see what is actually in the database, read it. Reads are always safe:
 
 ```bash
-node tools/seed_dryrun.js
+gcloud auth application-default login   # once
+# then a short read-only Admin SDK script using
+# getFirestore(app, 'teacher-corner-dev')
 ```
 
-Its last section lists any Storage path referenced in Firestore that has no
-object, which is the mistake worth catching.
+### What the six screens can and cannot show
+
+The web app has no workflow feature and no learning unit documents yet, so:
+
+| Screen | State |
+|---|---|
+| Splash, login | works |
+| Dashboard | your name, school, classroom and programme counts, classroom rows |
+| Classroom list, classroom detail | works, including each classroom's programmes |
+| Profile | works |
+| Learning unit | `workflows` does not exist in this database, so it lands on the missing-workflow screen |
+| Evidence | writes to `users/{uid}/submissions/*`, reachable only once a workflow exists |
 
 ---
 
@@ -144,7 +186,7 @@ lib/core/router/      go_router skeleton: shell + guard wired, screens stubbed.
 lib/features/shell/   Bottom-nav shell.
 assets/l10n/          en + hi. Every user-facing string goes here, from day one.
 assets/fonts/         Montserrat (headings) + Noto Sans (body). Bundled, not fetched.
-tools/seed.js         Sample data.
+tools/seed.js         DISABLED. Refuses to run; see §5.
 ```
 
 ### The two rules that will bite you

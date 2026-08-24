@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:tc_starter/core/models/assignment_evidence.dart';
 import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/learning_unit.dart';
+import 'package:tc_starter/core/models/programme.dart';
 import 'package:tc_starter/core/models/teacher.dart';
+import 'package:tc_starter/core/models/teacher_account.dart';
+import 'package:tc_starter/core/models/teacher_profile.dart';
 import 'package:tc_starter/core/models/workflow.dart';
 import 'package:tc_starter/core/services/firestore_service.dart';
 import 'package:tc_starter/features/auth/auth_provider.dart';
@@ -16,12 +19,18 @@ import 'package:tc_starter/features/auth/auth_provider.dart';
 class FakeFirestoreService extends FirestoreService {
   FakeFirestoreService({
     this.teacher,
+    this.profile,
+    this.teachersByUid,
+    this.profilesByUid,
+    this.classroomsByUid,
     this.classrooms = const [],
     this.learningUnits = const [],
+    this.programmes = const [],
     this.workflows = const [],
     this.throws,
     this.throwsOnClassroom,
     this.throwsOnLearningUnit,
+    this.throwsOnProgramme,
     this.evidence,
     this.throwsOnWriteEvidence,
     this.throwsOnFetchEvidence,
@@ -29,9 +38,37 @@ class FakeFirestoreService extends FirestoreService {
     this.gate,
   });
 
+  /// The linked `teachers/{docId}` record, or null for the UNLINKED state.
   final Teacher? teacher;
+
+  /// The `users/{uid}` document, or null when the teacher has never signed into
+  /// the web app. Independent of [teacher] on purpose: the four combinations of
+  /// present/absent are all real states and the tests exercise them.
+  final TeacherProfile? profile;
+
+  /// Per-uid teaching records. When set, this WINS over [teacher] and an
+  /// unlisted uid resolves to null rather than to somebody else's record.
+  ///
+  /// The point of the whole map: a test can hand two different uids two
+  /// different teachers and assert that each gets only their own. A single
+  /// [teacher] field cannot express "this uid gets nothing", which is the case
+  /// most likely to regress into showing the previous teacher's data.
+  final Map<String, Teacher>? teachersByUid;
+
+  /// Per-uid `users/{uid}` documents. Same precedence rule as [teachersByUid].
+  final Map<String, TeacherProfile>? profilesByUid;
+
+  /// Per-uid classroom documents, so two teachers' classroom reads cannot be
+  /// satisfied from one shared list.
+  final Map<String, List<Classroom>>? classroomsByUid;
+
   final List<Classroom> classrooms;
   final List<LearningUnit> learningUnits;
+
+  /// The `programmes/{id}` catalogue documents this fake knows about. An id that
+  /// is not in here resolves to null, which is the "referenced but absent" state
+  /// the detail screen renders as not-found.
+  final List<Programme> programmes;
   final List<Workflow> workflows;
 
   /// Thrown by [fetchTeacher] when set, to exercise the error state.
@@ -42,6 +79,9 @@ class FakeFirestoreService extends FirestoreService {
 
   /// Thrown by [fetchLearningUnit] when set.
   final Object? throwsOnLearningUnit;
+
+  /// Thrown by [fetchProgramme] when set, to exercise the error state.
+  final Object? throwsOnProgramme;
 
   /// The evidence already recorded, if any.
   AssignmentEvidence? evidence;
@@ -60,10 +100,14 @@ class FakeFirestoreService extends FirestoreService {
   final Completer<void>? gate;
 
   int teacherReads = 0;
+  int profileReads = 0;
   int classroomReads = 0;
   int learningUnitReads = 0;
+  int programmeReads = 0;
+  final List<String> requestedProgrammeIds = [];
   int workflowReads = 0;
   final List<String> requestedUids = [];
+  final List<String> requestedProfileUids = [];
 
   @override
   Future<Teacher?> fetchTeacher(String uid) async {
@@ -71,15 +115,43 @@ class FakeFirestoreService extends FirestoreService {
     requestedUids.add(uid);
     if (gate != null) await gate!.future;
     if (throws != null) throw throws!;
+    // An unlisted uid gets NULL, never a fallback to `teacher`. A fake that fell
+    // back would hide exactly the bug these tests exist to catch.
+    if (teachersByUid != null) return teachersByUid![uid];
     return teacher;
   }
+
+  @override
+  Future<TeacherProfile?> fetchTeacherProfile(String uid) async {
+    profileReads++;
+    requestedProfileUids.add(uid);
+    if (gate != null) await gate!.future;
+    if (throws != null) throw throws!;
+    if (profilesByUid != null) return profilesByUid![uid];
+    return profile;
+  }
+
+
+
+  /// NOT overridden: the real implementation composes the two reads above, so
+  /// letting it run is what keeps the fake honest about the join. Overriding it
+  /// would let a test pass while `fetchTeacherAccount` was wired up wrongly.
 
   @override
   Future<Classroom?> fetchClassroom(String classroomId) async {
     classroomReads++;
     if (gate != null) await gate!.future;
     if (throwsOnClassroom != null) throw throwsOnClassroom!;
-    for (final classroom in classrooms) {
+    // Keyed by classroom id, as the real one is. When [classroomsByUid] is set,
+    // every uid's documents are searched — because the REAL Firestore rules let
+    // any signed-in teacher read any classroom document, so a fake that hid them
+    // per uid would be testing an isolation the database does not provide. What
+    // must be isolated is WHICH IDS a teacher is told about, and that comes from
+    // their own teaching record.
+    for (final classroom in [
+      ...classrooms,
+      ...?classroomsByUid?.values.expand((list) => list),
+    ]) {
       if (classroom.classroomId == classroomId) return classroom;
     }
     return null;
@@ -90,7 +162,26 @@ class FakeFirestoreService extends FirestoreService {
     classroomReads++;
     if (throwsOnClassroom != null) throw throwsOnClassroom!;
     final wanted = ids.toSet();
-    return classrooms.where((c) => wanted.contains(c.classroomId)).toList();
+    // Searches [classroomsByUid] as well as [classrooms]. Overriding this at all
+    // is what made it possible to forget that: the real implementation just maps
+    // over fetchClassroom, so a fake that overrides only the singular one stays
+    // consistent for free while this one silently returned nothing.
+    return [
+      ...classrooms,
+      ...?classroomsByUid?.values.expand((list) => list),
+    ].where((c) => wanted.contains(c.classroomId)).toList();
+  }
+
+  @override
+  Future<Programme?> fetchProgramme(String programmeId) async {
+    programmeReads++;
+    requestedProgrammeIds.add(programmeId);
+    if (gate != null) await gate!.future;
+    if (throwsOnProgramme != null) throw throwsOnProgramme!;
+    for (final programme in programmes) {
+      if (programme.programmeId == programmeId) return programme;
+    }
+    return null;
   }
 
   @override
@@ -148,7 +239,7 @@ class FakeFirestoreService extends FirestoreService {
 class StubAuthProvider extends AuthProvider {
   StubAuthProvider({
     this.stubUid = 'uid_1',
-    this.stubTeacher,
+    this.stubAccount,
     LoginStage stubStage = LoginStage.phoneEntry,
     this.stubBusy = false,
     this.stubErrorKey,
@@ -156,7 +247,7 @@ class StubAuthProvider extends AuthProvider {
   }) : _stubStage = stubStage;
 
   final String? stubUid;
-  final Teacher? stubTeacher;
+  final TeacherAccount? stubAccount;
   final LoginStage _stubStage;
   final bool stubBusy;
   final String? stubErrorKey;
@@ -172,7 +263,10 @@ class StubAuthProvider extends AuthProvider {
   bool get authLoaded => true;
 
   @override
-  Teacher? get teacher => stubTeacher;
+  TeacherAccount? get account => stubAccount;
+
+  @override
+  bool get isTeacherLinked => stubAccount?.isLinked ?? false;
 
   @override
   LoginStage get stage => _stubStage;

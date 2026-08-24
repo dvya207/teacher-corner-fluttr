@@ -10,7 +10,8 @@
     "loading": "Loading…",
     "empty": "Nothing here yet",
     "not_built_title": "Not part of this build yet",
-    "not_built_subtitle": "This section exists in the full Teacher Corner app. It is outside the slice being rebuilt here."
+    "not_built_subtitle": "This section exists in the full Teacher Corner app. It is outside the slice being rebuilt here.",
+    "back": "Back"
   },
   "nav": {
     "dashboard": "Home",
@@ -91,13 +92,13 @@
   },
   "profile": {
     "title": "Profile",
-    "no_profile": "Your teacher profile has not been set up yet.",
     "uid_label": "Auth uid (debug)",
     "language": "Language",
     "help_title": "Help & Guide",
     "help_subtitle": "How to use the app",
     "help_empty_title": "Nothing here yet",
-    "help_empty_subtitle": "Guidance for using the app will be added here."
+    "help_empty_subtitle": "Guidance for using the app will be added here.",
+    "not_linked": "No teacher record is linked to this number yet, so your classrooms cannot be shown."
   },
   "dashboard": {
     "greeting": "Welcome back",
@@ -106,10 +107,10 @@
     "error_title": "Could not load your dashboard",
     "error_generic": "Something went wrong loading your dashboard.",
     "error_offline": "This is taking too long. Check your connection and try again.",
-    "no_profile": "You are signed in, but no teacher profile has been set up for this account yet.",
     "see_all": "See all",
     "your_classrooms": "Your classrooms",
-    "stat_students": "Students"
+    "stat_students": "Students",
+    "not_linked": "You are signed in, but no teacher record is linked to this number yet. Ask your administrator to register you against a classroom."
   },
   "classroom": {
     "stat_students": "Students",
@@ -125,7 +126,8 @@
     "error_title": "Could not load this classroom",
     "error_generic": "Something went wrong loading this classroom.",
     "error_offline": "This is taking too long. Check your connection and try again.",
-    "missing_unit": "This activity could not be loaded."
+    "missing_unit": "This activity could not be loaded.",
+    "programmes_label": "Programmes"
   },
   "evidence": {
     "title": "Photo evidence",
@@ -167,5 +169,27 @@
     "gu": "ગુજરાતી",
     "or": "ଓଡ଼ିଆ",
     "ur": "اردو"
+  },
+  "programme": {
+    "view_details": "View programme details",
+    "about": "About",
+    "details": "Details",
+    "grades": "Grades",
+    "ages": "Ages",
+    "institution": "Institution",
+    "catalogue_name": "Catalogue name",
+    "learning_units": "Learning units",
+    "assignments": "Assignments",
+    "updated": "Last updated",
+    "status_live": "Live",
+    "status_draft": "Draft",
+    "type_regular": "Classroom programme",
+    "type_stem_club": "STEM Club programme",
+    "no_learning_units": "No learning units have been added to this programme yet.",
+    "not_found_title": "Programme not available",
+    "not_found_subtitle": "This classroom lists a programme that is no longer in the catalogue.",
+    "error_title": "Could not load this programme",
+    "error_generic": "Something went wrong loading this programme.",
+    "error_offline": "This is taking too long. Check your connection and try again."
   }
 }

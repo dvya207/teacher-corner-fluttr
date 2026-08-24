@@ -2,50 +2,118 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tc_starter/core/models/teacher.dart';
+import 'package:tc_starter/core/models/teacher_profile.dart';
 import 'package:tc_starter/features/dashboard/dashboard_provider.dart';
 
 import '../../support/fakes.dart';
 
-Teacher aTeacher() => Teacher.fromMap('uid_1', {
+/// A `teachers/{docId}` record, shaped the way `teacher-corner-dev` shapes one.
+///
+/// Note what is NOT here: the document id is a client-allocated `tch_*`, not the
+/// uid, and the uid lives at `teacherMeta.uid`. That is the real relationship,
+/// and a fixture keyed by uid would let a doc-by-id read pass in a test and fail
+/// against the database.
+Teacher aTeacher() => Teacher.fromMap('tch_alloc_1', {
   'teacherMeta': {
+    'uid': 'uid_1',
     'firstName': 'Divya',
     'lastName': 'Jain',
-    'institutionName': 'Test School Oak',
   },
   'classrooms': {
     'cls_oak_7a': {
+      // The school is denormalised onto the CLASSROOM here, not onto
+      // teacherMeta, which is where the web app actually puts it.
+      'institutionName': 'Test School Oak',
       'programmes': {'prog_tip_2026': <String, dynamic>{}},
     },
     'cls_oak_et': {
+      'institutionName': 'Test School Oak',
       'programmes': {'prog_tip_2026': <String, dynamic>{}},
     },
   },
+});
+
+/// The `users/{uid}` half. Carries a DIFFERENT name from the teaching record on
+/// purpose: live data does exactly this, and the profile is supposed to win.
+TeacherProfile aProfile() => TeacherProfile.fromMap('uid_1', {
+  'firstName': 'Divya',
+  'lastName': 'Jain',
+  'institutionName': 'KUVEMPU UNIVERSITY',
 });
 
 void main() {
   test('starts in loading, before anything has been asked for', () {
     final provider = DashboardProvider(firestore: FakeFirestoreService());
     expect(provider.status, DashboardStatus.loading);
-    expect(provider.teacher, isNull);
+    expect(provider.account, isNull);
   });
 
   test('a successful load exposes the teacher and the counts', () async {
+    final provider = DashboardProvider(
+      firestore: FakeFirestoreService(teacher: aTeacher(), profile: aProfile()),
+    );
+
+    await provider.load('uid_1');
+
+    expect(provider.status, DashboardStatus.loaded);
+    expect(provider.account!.displayName, 'Divya Jain');
+    expect(provider.account!.classroomCount, 2);
+    // Both classrooms share one programme.
+    expect(provider.account!.programmeCount, 1);
+    expect(provider.errorKey, isNull);
+  });
+
+  test('the profile wins the name and the school, the record wins the classes',
+      () async {
+    // The two documents disagree, which is the state live data is in. The
+    // profile is what the teacher controls, so it decides identity; only the
+    // teaching record knows the classrooms.
+    final provider = DashboardProvider(
+      firestore: FakeFirestoreService(teacher: aTeacher(), profile: aProfile()),
+    );
+
+    await provider.load('uid_1');
+
+    expect(provider.account!.institutionName, 'KUVEMPU UNIVERSITY');
+    expect(provider.account!.classroomCount, 2);
+    expect(provider.isTeacherNotLinked, isFalse);
+  });
+
+  test('a profile with no teaching record is linked=false, not an error',
+      () async {
+    // Signed in, `users/{uid}` present, and no `teachers` document carries this
+    // uid. The header still has a name and a school to show; what is missing is
+    // the classrooms, and the screen says so rather than erroring.
+    final provider = DashboardProvider(
+      firestore: FakeFirestoreService(profile: aProfile()),
+    );
+
+    await provider.load('uid_1');
+
+    expect(provider.status, DashboardStatus.loaded);
+    expect(provider.isTeacherNotLinked, isTrue);
+    expect(provider.account!.displayName, 'Divya Jain');
+    expect(provider.account!.institutionName, 'KUVEMPU UNIVERSITY');
+    expect(provider.classrooms, isEmpty);
+  });
+
+  test('falls back to the teaching record when there is no profile', () async {
+    // A teacher who has only ever signed into THIS app has no users/{uid}: that
+    // document is written by the web app. The name has to come from the record.
     final provider = DashboardProvider(
       firestore: FakeFirestoreService(teacher: aTeacher()),
     );
 
     await provider.load('uid_1');
 
-    expect(provider.status, DashboardStatus.loaded);
-    expect(provider.teacher!.displayName, 'Divya Jain');
-    expect(provider.teacher!.classroomCount, 2);
-    // Both classrooms share one programme.
-    expect(provider.teacher!.programmeCount, 1);
-    expect(provider.errorKey, isNull);
+    expect(provider.account!.displayName, 'Divya Jain');
+    // Sourced from the classroom entry, because teacherMeta has no school.
+    expect(provider.account!.institutionName, 'Test School Oak');
+    expect(provider.isTeacherNotLinked, isFalse);
   });
 
   test(
-    'a missing teacher document is loaded-with-no-profile, not an error',
+    'neither document present is loaded-and-unlinked, not an error',
     () async {
       final provider = DashboardProvider(firestore: FakeFirestoreService());
 
@@ -54,7 +122,8 @@ void main() {
       // Signed in, nothing provisioned. Retrying cannot fix it, so it must not
       // present as a failure.
       expect(provider.status, DashboardStatus.loaded);
-      expect(provider.hasNoProfile, isTrue);
+      expect(provider.isTeacherNotLinked, isTrue);
+      expect(provider.account!.isEmpty, isTrue);
     },
   );
 
@@ -67,7 +136,10 @@ void main() {
 
     expect(provider.status, DashboardStatus.error);
     expect(provider.errorKey, 'dashboard.error_generic');
-    expect(provider.hasNoProfile, isFalse);
+    // An error is NOT "not linked": the difference is whether we managed to
+    // ask. Conflating them would show a teacher a "register with your admin"
+    // message when the real problem was the network.
+    expect(provider.isTeacherNotLinked, isFalse);
   });
 
   test(

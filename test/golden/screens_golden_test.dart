@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/teacher.dart';
+import 'package:tc_starter/core/models/teacher_account.dart';
+import 'package:tc_starter/core/models/teacher_profile.dart';
 import 'package:tc_starter/features/auth/auth_provider.dart';
 import 'package:tc_starter/features/auth/login_screen.dart';
 import 'package:tc_starter/features/classrooms/classroom_list_screen.dart';
@@ -38,11 +40,14 @@ import '../support/pump_app.dart';
 /// These are for LOOKING at. They are rendered against fake data on a 360x800
 /// surface, so they show layout, type and colour, and they prove nothing about
 /// whether the real reads work.
-Teacher aTeacher() => Teacher.fromMap('uid_1', {
+Teacher aTeacher() => Teacher.fromMap('tch_alloc_1', {
       'name': 'Intern Teacher',
       'teacherMeta': {
+        'uid': 'uid_1',
         'firstName': 'Divya',
         'lastName': 'Jain',
+        // Kept on the meta here, unlike the live teacher-corner-dev shape, so
+        // these images also cover the imported-from-production path.
         'institutionName': 'Test School Oak',
         'designation': 'Teacher',
       },
@@ -167,6 +172,20 @@ class _NoPicker implements PhotoPicker {
   Future<PickedPhoto?> pick(PhotoSource source) async => null;
 }
 
+/// The two documents joined, as every screen now consumes them.
+TeacherAccount anAccount({bool linked = true, bool withProfile = true}) =>
+    TeacherAccount(
+      uid: 'uid_1',
+      profile: withProfile
+          ? TeacherProfile.fromMap('uid_1', {
+              'firstName': 'Divya',
+              'lastName': 'Jain',
+              'institutionName': 'Test School Oak',
+            })
+          : null,
+      teaching: linked ? aTeacher() : null,
+    );
+
 void main() {
   setUpAll(loadAppFonts);
   setUp(initLocalizationForTest);
@@ -280,9 +299,9 @@ void main() {
       await shoot(tester, '07_dashboard_error');
     });
 
-    testWidgets('signed in, no profile provisioned', (tester) async {
+    testWidgets('signed in, no teaching record linked', (tester) async {
       await pumpDash(tester, firestore: FakeFirestoreService());
-      await shoot(tester, '08_dashboard_no_profile');
+      await shoot(tester, '08_dashboard_not_linked');
     });
   });
 
@@ -362,7 +381,15 @@ void main() {
         tester,
         providers: [
           ChangeNotifierProvider<AuthProvider>(
-            create: (_) => StubAuthProvider(stubTeacher: aTeacher()),
+            create: (_) => StubAuthProvider(stubAccount: anAccount()),
+          ),
+          // The stats row reads the student total from here. The real app
+          // always has this above the shell; a screen that shows a
+          // dashboard-derived number depends on the dashboard's provider.
+          ChangeNotifierProvider<DashboardProvider>(
+            create: (_) => DashboardProvider(
+              firestore: FakeFirestoreService(teacher: aTeacher()),
+            ),
           ),
         ],
         child: const ProfileScreen(),

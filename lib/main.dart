@@ -4,8 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'core/l10n/locales.dart';
 import 'core/router/app_router.dart';
 import 'core/services/firestore_service.dart';
+import 'core/splash_gate.dart';
 import 'core/startup.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/text_scaling.dart';
@@ -68,11 +70,11 @@ class _TcStarterRootState extends State<TcStarterRoot> {
   }
 
   Widget _localized(Widget child) => EasyLocalization(
-        // Start with two. The production app carries eleven; adding more is a
-        // matter of dropping another JSON file in and listing it here.
-        supportedLocales: const [Locale('en'), Locale('hi')],
+        // The list lives in core/l10n/locales.dart, because the profile
+        // screen's language picker is built from the same one.
+        supportedLocales: kSupportedLocales,
         path: 'assets/l10n',
-        fallbackLocale: const Locale('en'),
+        fallbackLocale: kFallbackLocale,
         child: child,
       );
 }
@@ -108,7 +110,20 @@ class TcStarterApp extends StatefulWidget {
 class _TcStarterAppState extends State<TcStarterApp> {
   late final FirestoreService _firestore;
   late final AuthProvider _auth;
+  late final SplashGate _splashGate;
+  late final Listenable _routerRefresh;
   late final GoRouter _router;
+
+  /// Owned here rather than created by the providers, so that [_onAuthChanged]
+  /// has something to reset. They must outlive the screens — the dashboard is
+  /// rebuilt on every tab change and a per-screen provider would refetch each
+  /// time — which is exactly why they need clearing when the teacher changes.
+  late final DashboardProvider _dashboard;
+  late final ClassroomProvider _classrooms;
+
+  /// The uid the per-teacher providers currently hold data for. Compared against
+  /// the session on every auth notification.
+  String? _loadedUid;
 
   @override
   void initState() {
@@ -117,19 +132,60 @@ class _TcStarterAppState extends State<TcStarterApp> {
     // handle on one database.
     _firestore = FirestoreService();
     _auth = AuthProvider(firestore: _firestore);
+    _splashGate = SplashGate();
+    // Merged ONCE and stored: `refreshListenable` must be a stable object, and
+    // `Listenable.merge` returns a new instance on every call. Building it
+    // inline would rebuild the router and wipe the navigation stack.
+    _routerRefresh = Listenable.merge([_auth, _splashGate]);
     // Built ONCE, here, never in build(). See the note in app_router.dart.
     _router = AppRouter.router(
-      refreshListenable: _auth,
+      refreshListenable: _routerRefresh,
       isAuthenticated: () => _auth.isAuthenticated,
       isAuthLoaded: () => _auth.authLoaded,
+      isSplashHoldElapsed: () => _splashGate.elapsed,
     );
     // Listening starts only after the router exists, so the very first auth
-    // notification has something to refresh.
+    // notification has something to refresh. Same for the splash clock: it
+    // ends by asking the router to re-evaluate.
+    _dashboard = DashboardProvider(firestore: _firestore);
+    _classrooms = ClassroomProvider(firestore: _firestore);
+    // WHO IS SIGNED IN IS THE ONLY INPUT TO EVERY PER-TEACHER READ, so a change
+    // of user has to invalidate everything already loaded. Registered before
+    // _auth.start() so the very first notification is seen.
+    _auth.addListener(_onAuthChanged);
+    _loadedUid = _auth.uid;
     _auth.start();
+    _splashGate.start();
+  }
+
+  /// Clears every per-teacher provider when the signed-in user changes.
+  ///
+  /// WHY THIS IS NOT OPTIONAL. Both providers are created above the router, so
+  /// they survive a sign-out with the previous teacher's name, school and
+  /// classrooms still in them. The dashboard asks for its own data from a
+  /// post-frame callback, which runs AFTER the first frame is built — so without
+  /// this, the first thing a second teacher sees on the same device is the first
+  /// teacher's dashboard, fully rendered, until their own read returns.
+  ///
+  /// Fires on sign-out too, not only on a switch between two teachers: clearing
+  /// at sign-out means there is nothing left to leak in the first place, rather
+  /// than a race between the next sign-in and the next load.
+  void _onAuthChanged() {
+    final uid = _auth.uid;
+    if (uid == _loadedUid) return;
+    _loadedUid = uid;
+    _dashboard.reset();
+    _classrooms.reset();
   }
 
   @override
   void dispose() {
+    _auth.removeListener(_onAuthChanged);
+    _splashGate.dispose();
+    // Disposed here because this State owns them; the .value providers below
+    // deliberately do not take ownership.
+    _dashboard.dispose();
+    _classrooms.dispose();
     _auth.dispose();
     super.dispose();
   }
@@ -146,14 +202,11 @@ class _TcStarterAppState extends State<TcStarterApp> {
         // disposes it, and the router already holds a reference to the same
         // instance. A second owner would dispose it out from under the router.
         ChangeNotifierProvider<AuthProvider>.value(value: _auth),
-        // Created by the provider, so it is disposed with the tree. Unlike
-        // _auth, the router holds no reference to it.
-        ChangeNotifierProvider<DashboardProvider>(
-          create: (_) => DashboardProvider(firestore: _firestore),
-        ),
-        ChangeNotifierProvider<ClassroomProvider>(
-          create: (_) => ClassroomProvider(firestore: _firestore),
-        ),
+        // .value, not create: this State owns both and disposes them, because
+        // it also has to be able to reset them when the signed-in user changes.
+        // See _onAuthChanged.
+        ChangeNotifierProvider<DashboardProvider>.value(value: _dashboard),
+        ChangeNotifierProvider<ClassroomProvider>.value(value: _classrooms),
       ],
       // ScreenUtilInit MUST sit above MaterialApp so that every route, dialog
       // and bottom sheet has an initialised ScreenUtil. 360x800 is the Android

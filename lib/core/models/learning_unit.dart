@@ -40,7 +40,16 @@ class LearningUnit {
   /// Maturity level to `LearningUnitResources` document id.
   final Map<String, String> resources;
 
-  static const String collection = 'LearningUnits';
+  /// `learningUnits`, LOWERCASE: the web app's collection name in
+  /// `teacher-corner-dev`, not production's `LearningUnits`.
+  ///
+  /// THE COLLECTION IS PRESENT BUT EMPTY as of the repoint, and the web app
+  /// stores a NARROWER document than this model reads: `stepCount`,
+  /// `longDescription`, `learningUnitPreviewImage` and `resources` are all
+  /// absent from its `LearningUnit` interface. Every one of those is nullable
+  /// or defaulted here, so a real web-app document parses and degrades rather
+  /// than throwing.
+  static const String collection = 'learningUnits';
 
   /// Never blank, never "null": three possible field names in descending
   /// preference, then the id.

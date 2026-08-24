@@ -10,7 +10,7 @@ import 'package:flutter/foundation.dart';
 /// reading the device logcat.
 ///
 /// Each record captures only:
-///   - collection (logical area, e.g. 'Classrooms', supplied by the caller)
+///   - collection (logical area, e.g. 'classrooms', supplied by the caller)
 ///   - a redacted / hashed docId (never the raw id, to stay privacy-safe)
 ///   - the field name
 ///   - the observed runtime type (NOT the value, to avoid leaking PII)

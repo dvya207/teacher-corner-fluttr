@@ -1,8 +1,20 @@
 {
-  "firestore": [
+  "//firestore": "DELIBERATELY ABSENT, and this note is here so nobody helpfully adds it back. This app is a READ CONSUMER of the 'teacher-corner-dev' database, which is owned by the Angular Teacher Corner web app in ~/code/teacher-corner. That app's firestore.rules is the ONLY ruleset governing this data and is deployed only from there. A 'firestore' block here would give this repo a path to overwrite it: rules deploys REPLACE a database's whole ruleset rather than merging, so one careless 'firebase deploy' from this directory could revoke the live web app's own access. With no block at all, 'firebase deploy --only firestore' from here has nothing to target and fails instead of succeeding destructively.",
+  "functions": [
     {
-      "database": "divya-teacher-corner",
-      "rules": "firestore.rules"
+      "//": "ONLY this directory. Forked from the web app (~/code/teacher-corner/functions-otp), retargeted to the divya-teacher-corner database with tcDivya* names.",
+      "source": "functions-otp",
+      "//codebase": "LOAD-BEARING. helix-staging-india also runs the web app's tcDevSendOtp/tcDevVerifyOtp (codebase 'tcdev-otp') and sendWelcomeEmail/expenseLogTotals (unlabelled, so DEFAULT codebase). The CLI only considers same-codebase functions for deletion, so a codebase of our own puts all of those structurally out of reach of a deploy from here. Never change this to 'default'.",
+      "codebase": "divya-otp",
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ],
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.local",
+        ".env.example"
+      ]
     }
   ],
   "flutter": {

@@ -14,6 +14,7 @@ import '../../core/widgets/tc_section_label.dart';
 import '../../core/widgets/tc_status_message.dart';
 import 'classroom_detail_provider.dart';
 import 'widgets/activity_card.dart';
+import 'widgets/programme_card.dart';
 
 /// One classroom: its programmes, and the learning units within each.
 class ClassroomDetailScreen extends StatefulWidget {
@@ -134,15 +135,28 @@ class _Loaded extends StatelessWidget {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      TcSectionLabel('classroom.programmes_label'.tr()),
+                      SizedBox(height: AppDimensions.spacing12),
                       for (final entry in detail.programmes) ...[
-                        TcSectionLabel(entry.programme.label),
+                        // The programme itself is now the tappable row, so the
+                        // flow reaches its catalogue document. Its activities,
+                        // when there are any, are listed beneath it.
+                        ProgrammeCard(
+                          programme: entry.programme,
+                          onTap: () => context.push(
+                            '/classrooms/$classroomId/programmes/'
+                            '${entry.programme.programmeId}'
+                            '?classroomName='
+                            '${Uri.encodeComponent(classroom.displayName)}',
+                          ),
+                        ),
                         SizedBox(height: AppDimensions.spacing12),
-                        if (entry.activities.isEmpty)
-                          TcStatusBanner(
-                            type: TcMsgType.info,
-                            message: 'classroom.no_activities_subtitle'.tr(),
-                          )
-                        else
+                        // No empty-activities banner. learningUnits has no
+                        // documents and workflows does not exist in this
+                        // database, so every classroom would carry an identical
+                        // "nothing here" line under every programme. When the
+                        // bindings arrive, the cards below appear on their own.
+                        if (entry.activities.isNotEmpty)
                           for (final activity in entry.activities) ...[
                             ActivityCard(
                               activity: activity,

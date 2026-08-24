@@ -20,3 +20,8 @@ android/key.properties
 # Seed script deps — installed locally, never committed.
 tools/node_modules/
 tools/package-lock.json
+
+# Golden-test failure artefacts. Written by `flutter test` ONLY when a golden
+# mismatches, and rewritten on the next mismatch, so they are debug output
+# rather than source. Kept on disk for inspection, out of history.
+test/golden/failures/

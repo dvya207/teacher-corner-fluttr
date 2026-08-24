@@ -2,7 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tc_starter/core/router/app_router.dart';
 
 /// Tests the routing POLICY, not the widget tree. `resolveRedirect` is a pure
-/// function of three inputs, and it is the piece that regresses.
+/// function of its inputs, and it is the piece that regresses.
+///
+/// `splashHoldElapsed` defaults to true, i.e. "no hold", so every case that is
+/// not about the hold reads exactly as it did before the hold existed.
 void main() {
   // Every route the app has, plus one it does not, because the guard has to
   // hold for unknown locations too (a stale deep link, a typo in a push).
@@ -118,6 +121,70 @@ void main() {
           reason: '$location was redirected away from unnecessarily',
         );
       }
+    });
+  });
+
+  group('the splash minimum display window', () {
+    test('holds on the splash even when auth has already answered', () {
+      // The whole point of the hold: auth can resolve in under 200ms, which
+      // left the branding invisible.
+      for (final location in everywhere.where((l) => l != '/splash')) {
+        expect(
+          AppRouter.resolveRedirect(
+            location: location,
+            authLoaded: true,
+            isAuthenticated: true,
+            splashHoldElapsed: false,
+          ),
+          '/splash',
+          reason: '$location should wait out the splash window',
+        );
+      }
+    });
+
+    test('stays put on the splash while the window runs', () {
+      expect(
+        AppRouter.resolveRedirect(
+          location: '/splash',
+          authLoaded: true,
+          isAuthenticated: true,
+          splashHoldElapsed: false,
+        ),
+        isNull,
+      );
+    });
+
+    test('routes on the moment the window closes', () {
+      expect(
+        AppRouter.resolveRedirect(
+          location: '/splash',
+          authLoaded: true,
+          isAuthenticated: true,
+          splashHoldElapsed: true,
+        ),
+        '/dashboard',
+      );
+    });
+
+    test('a signed-out teacher still waits, then lands on login', () {
+      expect(
+        AppRouter.resolveRedirect(
+          location: '/splash',
+          authLoaded: true,
+          isAuthenticated: false,
+          splashHoldElapsed: false,
+        ),
+        isNull,
+      );
+      expect(
+        AppRouter.resolveRedirect(
+          location: '/splash',
+          authLoaded: true,
+          isAuthenticated: false,
+          splashHoldElapsed: true,
+        ),
+        '/login',
+      );
     });
   });
 }

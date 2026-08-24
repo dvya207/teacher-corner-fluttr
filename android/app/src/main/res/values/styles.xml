@@ -5,6 +5,10 @@
         <!-- Show a splash screen on the activity. Automatically removed when
              the Flutter engine draws its first frame -->
         <item name="android:windowBackground">@drawable/launch_background</item>
+        <!-- Pre-API-31 only; API 31+ uses values-v31 / values-night-v31. -->
+        <item name="android:statusBarColor">@color/tc_launch_navy</item>
+        <item name="android:navigationBarColor">@color/tc_launch_navy</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
     <!-- Theme applied to the Android Window as soon as the process has started.
          This theme determines the color of the Android Window while your
