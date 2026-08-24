@@ -267,17 +267,6 @@ class _NeedMoreHelp extends StatelessWidget {
                     color: AppColors.textSecondary,
                   ),
                 ),
-                SizedBox(height: AppDimensions.spacing8),
-                // Rendered as text, not a link: there is no privacy policy URL
-                // in this build, and a link that goes nowhere is worse than a
-                // line of text. It becomes a link the day there is somewhere for
-                // it to go.
-                Text(
-                  'guide.privacy'.tr(),
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.skyBlue,
-                  ),
-                ),
               ],
             ),
           ),
