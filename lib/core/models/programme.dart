@@ -37,7 +37,7 @@ class Programme {
     this.type,
     this.status,
     this.learningUnitIds = const [],
-    this.assignmentIds = const [],
+    this.assignments = const {},
     this.imagePath,
     this.createdAt,
     this.updatedAt,
@@ -88,8 +88,25 @@ class Programme {
   /// database today; the collection those ids would point at has no documents.
   final List<String> learningUnitIds;
 
-  /// Assignments attached to this programme. Empty on every document today.
-  final List<String> assignmentIds;
+  /// Assignments allotted to this programme, keyed by assignment doc id, with
+  /// the due date the programme set for each.
+  ///
+  /// A MAP, NOT AN ARRAY, and this was wrong before. It was parsed with
+  /// `asStringList`, which returns nothing for a map, so the field read as empty
+  /// on every document and the old comment recorded that as a fact about the
+  /// data. It is a fact about the parser: 2 of the 20 programmes in this database
+  /// carry the field, both as maps, and production has it on 2715 of 14240.
+  ///
+  /// Every entry is shaped `{ assignmentId, assignmentDueDate }` and the key
+  /// always equals the `assignmentId` inside it, so the key is the id and the
+  /// value contributes only the date.
+  ///
+  /// ORDER DOES NOT MATTER, unlike [learningUnitIds]. A map has none to preserve,
+  /// which is why the web app's picker for these offers no reordering.
+  final Map<String, DateTime?> assignments;
+
+  /// The allotted assignment ids. Order is not meaningful — see [assignments].
+  List<String> get assignmentIds => assignments.keys.toList(growable: false);
 
   /// Storage path of the thumbnail, e.g. `programme_images/{id}.png`. Empty
   /// string on every document today, which is why [imagePath] is null rather
@@ -128,14 +145,16 @@ class Programme {
       institutionName: _text(data['institutionName']),
       // ListPolicy.skip, not fail: one unparseable entry in a grade list must
       // cost that entry, not the whole programme screen.
-      grades: SafeParse.asStringList(
+      grades:
+          SafeParse.asStringList(
             data['grades'],
             collection: collection,
             docId: programmeId,
             field: 'grades',
           ) ??
           const [],
-      ages: SafeParse.asStringList(
+      ages:
+          SafeParse.asStringList(
             data['age'],
             collection: collection,
             docId: programmeId,
@@ -144,20 +163,15 @@ class Programme {
           const [],
       type: _text(data['type']),
       status: _text(data['programmeStatus']),
-      learningUnitIds: SafeParse.asStringList(
+      learningUnitIds:
+          SafeParse.asStringList(
             data['learningUnitsIds'],
             collection: collection,
             docId: programmeId,
             field: 'learningUnitsIds',
           ) ??
           const [],
-      assignmentIds: SafeParse.asStringList(
-            data['assignmentIds'],
-            collection: collection,
-            docId: programmeId,
-            field: 'assignmentIds',
-          ) ??
-          const [],
+      assignments: _assignments(data['assignmentIds'], programmeId),
       imagePath: _text(data['programmeImagePath']),
       createdAt: SafeParse.asDate(
         data['createdAt'],
@@ -230,4 +244,45 @@ class Programme {
     if (ages.isEmpty) return null;
     return ages.join(', ');
   }
+}
+
+/// `assignmentIds` off a programme document: a map of id to due date.
+///
+/// TOLERATES THE ARRAY SHAPE TOO. `--schema--` in production's collection carries
+/// `assignmentsIds` — with an extra 's' — as an array of two strings, and a
+/// hand-edited document could plausibly hold a plain array here. An array is read
+/// as ids with no due date rather than dropped, because an assignment with an
+/// unknown date is still allotted.
+Map<String, DateTime?> _assignments(dynamic raw, String programmeId) {
+  final out = <String, DateTime?>{};
+
+  if (raw is List) {
+    for (final entry in raw) {
+      final id = SafeParse.asDisplayString(entry);
+      if (id != null && id.isNotEmpty) out[id] = null;
+    }
+
+    return Map.unmodifiable(out);
+  }
+
+  if (raw is! Map) return const {};
+
+  raw.forEach((key, value) {
+    final id = key.toString().trim();
+
+    if (id.isEmpty) return;
+
+    final fields = value is Map
+        ? value.map((k, v) => MapEntry(k.toString(), v))
+        : const <String, dynamic>{};
+
+    out[id] = SafeParse.asDate(
+      fields['assignmentDueDate'],
+      collection: Programme.collection,
+      docId: programmeId,
+      field: 'assignmentIds.$id.assignmentDueDate',
+    );
+  });
+
+  return Map.unmodifiable(out);
 }

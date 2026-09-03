@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tc_starter/core/models/programme.dart';
 import 'package:tc_starter/core/utils/parse_diagnostics.dart';
@@ -176,6 +177,62 @@ void main() {
 
       expect(p.gradeRange, isNull);
       expect(p.ageRange, '6, 7');
+    });
+  });
+
+  /// `assignmentIds` is a MAP, and used not to be read as one.
+  ///
+  /// It was parsed with `asStringList`, which returns nothing for a map, so the
+  /// field read as empty on every document and the model's own comment recorded
+  /// that as a fact about the data. It was a fact about the parser: 2 of the 20
+  /// programmes in this database carry the field, both as maps, and production has
+  /// it on 2715 of 14240.
+
+  group('assignmentIds', () {
+    /// Shaped exactly as the live document `programmes/bfmwYr9cTpzXFIoWsQlY`.
+    Map<String, dynamic> withAssignments() => {
+      'programmeId': 'p1',
+      'assignmentIds': {
+        'BpZaZnFfbdJgp2Cx0Pdw': {
+          'assignmentId': 'BpZaZnFfbdJgp2Cx0Pdw',
+          'assignmentDueDate': Timestamp.fromDate(DateTime.utc(2026, 6, 3)),
+        },
+        'a4E9ffKLLduvnEj50W4X': {
+          'assignmentId': 'a4E9ffKLLduvnEj50W4X',
+          'assignmentDueDate': null,
+        },
+      },
+    };
+
+    test('reads the map, which the old list parser could not', () {
+      final p = Programme.fromMap('p1', withAssignments());
+
+      expect(p.assignmentIds, hasLength(2));
+      expect(p.assignmentIds, contains('BpZaZnFfbdJgp2Cx0Pdw'));
+    });
+
+    test('carries the due date the programme set', () {
+      final p = Programme.fromMap('p1', withAssignments());
+
+      expect(p.assignments['BpZaZnFfbdJgp2Cx0Pdw'], DateTime.utc(2026, 6, 3));
+      expect(p.assignments['a4E9ffKLLduvnEj50W4X'], isNull);
+    });
+
+    test('tolerates a plain array, reading ids with no date', () {
+      // A hand-edited document, or production's --schema-- artefact.
+      final p = Programme.fromMap('p1', {
+        'programmeId': 'p1',
+        'assignmentIds': ['x1', 'x2'],
+      });
+
+      expect(p.assignmentIds, ['x1', 'x2']);
+      expect(p.assignments['x1'], isNull);
+    });
+
+    test('is empty when the field is absent, which most programmes are', () {
+      final p = Programme.fromMap('p1', {'programmeId': 'p1'});
+
+      expect(p.assignmentIds, isEmpty);
     });
   });
 }
