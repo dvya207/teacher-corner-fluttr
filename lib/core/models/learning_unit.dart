@@ -1,4 +1,5 @@
 import '../utils/safe_parse.dart';
+import 'learning_unit_taxonomy.dart';
 
 /// `LearningUnits/{luId}`: the activity itself, shared across classrooms.
 ///
@@ -12,7 +13,13 @@ class LearningUnit {
     this.shortDescription,
     this.longDescription,
     this.stepCount,
+    this.learningUnitCode,
+    this.subjectCode,
     this.subjectName,
+    this.domainCode,
+    this.domainName,
+    this.subDomainCode,
+    this.subDomainName,
     this.previewImagePath,
     this.maturity,
     this.resources = const {},
@@ -24,7 +31,24 @@ class LearningUnit {
   final String? shortDescription;
   final String? longDescription;
   final int? stepCount;
+
+  /// `[A-Z]{2}[0-9]{2}`, e.g. `BO07`. The ONLY reliable categorisation field.
+  ///
+  /// Present and well-formed on 598/598 sampled production documents, where the
+  /// stored names beside it are wrong on roughly one in twelve. Not the document
+  /// id: ids are Firestore auto-ids and never codes.
+  final String? learningUnitCode;
+
+  // The categorisation as the DOCUMENT stores it. Read through
+  // [categorisation] rather than directly — these are the unreliable copies,
+  // kept only so they can serve as a fallback for a code the table
+  // does not know. See learning_unit_taxonomy.dart for the measurements.
+  final String? subjectCode;
   final String? subjectName;
+  final String? domainCode;
+  final String? domainName;
+  final String? subDomainCode;
+  final String? subDomainName;
 
   /// A Cloud Storage PATH, not a download URL.
   ///
@@ -50,6 +74,28 @@ class LearningUnit {
   /// or defaulted here, so a real web-app document parses and degrades rather
   /// than throwing.
   static const String collection = 'learningUnits';
+
+  /// Subject, domain and sub-domain, derived from [learningUnitCode] where the
+  /// table knows it and fell back to the stored fields where it does not.
+  ///
+  /// Computed rather than stored so a Firestore override installed after this
+  /// object was parsed is picked up on the next read.
+  LearningUnitCategorisation get categorisation =>
+      LearningUnitTaxonomy.instance.resolve(
+        code: learningUnitCode,
+        storedSubjectCode: subjectCode,
+        storedSubjectName: subjectName,
+        storedDomainCode: domainCode,
+        storedDomainName: domainName,
+        storedSubDomainCode: subDomainCode,
+        storedSubDomainName: subDomainName,
+      );
+
+  /// The subject to SHOW. Prefers the derived name over the stored one.
+  ///
+  /// [subjectName] is the raw field and stays available; this is what a widget
+  /// should render.
+  String? get resolvedSubjectName => categorisation.subjectName;
 
   /// Never blank, never "null": three possible field names in descending
   /// preference, then the id.
@@ -108,7 +154,13 @@ class LearningUnit {
         docId: learningUnitId,
         field: 'stepCount',
       ),
+      learningUnitCode: SafeParse.asDisplayString(data['learningUnitCode']),
+      subjectCode: SafeParse.asDisplayString(data['subjectCode']),
       subjectName: SafeParse.asDisplayString(data['subjectName']),
+      domainCode: SafeParse.asDisplayString(data['domainCode']),
+      domainName: SafeParse.asDisplayString(data['domainName']),
+      subDomainCode: SafeParse.asDisplayString(data['subDomainCode']),
+      subDomainName: SafeParse.asDisplayString(data['subDomainName']),
       previewImagePath: SafeParse.asRefString(
         data['learningUnitPreviewImage'],
         collection: collection,

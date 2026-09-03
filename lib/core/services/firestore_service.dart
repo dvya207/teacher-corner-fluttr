@@ -4,6 +4,7 @@ import '../firebase/firestore_ref.dart';
 import '../models/assignment_evidence.dart';
 import '../models/classroom.dart';
 import '../models/learning_unit.dart';
+import '../models/learning_unit_taxonomy.dart';
 import '../models/programme.dart';
 import '../models/teacher.dart';
 import '../models/teacher_account.dart';
@@ -41,8 +42,7 @@ class FirestoreService {
   /// signed into this app: `users/{uid}` is written by the WEB app on sign-in
   /// and this app never writes it.
   Future<TeacherProfile?> fetchTeacherProfile(String uid) async {
-    final snap =
-        await _db.collection(TeacherProfile.collection).doc(uid).get();
+    final snap = await _db.collection(TeacherProfile.collection).doc(uid).get();
     if (!snap.exists) return null;
     return TeacherProfile.fromMap(
       snap.id,
@@ -112,7 +112,10 @@ class FirestoreService {
     // Both field paths, in turn: the web app writes both with the same value,
     // a production import may carry only one, and Firestore cannot OR across
     // two fields in a single query.
-    for (final field in [Teacher.phoneNumberFieldPath, Teacher.phoneFieldPath]) {
+    for (final field in [
+      Teacher.phoneNumberFieldPath,
+      Teacher.phoneFieldPath,
+    ]) {
       final byPhone = await _db
           .collection(Teacher.collection)
           .where(field, isEqualTo: digits)
@@ -216,6 +219,38 @@ class FirestoreService {
     );
   }
 
+  /// The 44 taxonomy rows from `Configuration/learningUnitDomains`.
+  ///
+  /// Returns an EMPTY list rather than throwing when the document is missing,
+  /// malformed or unreachable, because the caller's correct response to all
+  /// three is identical: keep the static rows. The app must categorise units
+  /// with this collection unreadable, which is the whole reason the rows are
+  /// compiled in as well as seeded.
+  Future<List<TaxonomyRow>> fetchLearningUnitTaxonomy() async {
+    final snap = await _db
+        .collection(LearningUnitTaxonomy.configurationCollection)
+        .doc(LearningUnitTaxonomy.configurationDocId)
+        .get();
+    if (!snap.exists) return const [];
+
+    final raw =
+        (snap.data() ??
+        const <String, dynamic>{})[LearningUnitTaxonomy.domainsField];
+    if (raw is! List) return const [];
+
+    final rows = <TaxonomyRow>[];
+    for (final entry in raw) {
+      if (entry is! Map) continue;
+      final row = TaxonomyRow.fromMap(
+        entry.map((key, value) => MapEntry(key.toString(), value)),
+      );
+      // A row without its letter pair cannot be looked up, so it is not a row.
+      if (row.domainCode.isEmpty || row.subDomainCode.isEmpty) continue;
+      rows.add(row);
+    }
+    return rows;
+  }
+
   /// The workflow a specific classroom runs for a specific learning unit.
   ///
   /// The caller has to have resolved the workflow id from the CLASSROOM first,
@@ -266,15 +301,16 @@ class FirestoreService {
     required String uid,
     required String classroomId,
     required String programmeId,
-  }) =>
-      _db
-          .collection(TeacherProfile.collection)
-          .doc(uid)
-          .collection(AssignmentEvidence.submissionsSubcollection)
-          .doc(AssignmentEvidence.documentId(
-            classroomId: classroomId,
-            programmeId: programmeId,
-          ));
+  }) => _db
+      .collection(TeacherProfile.collection)
+      .doc(uid)
+      .collection(AssignmentEvidence.submissionsSubcollection)
+      .doc(
+        AssignmentEvidence.documentId(
+          classroomId: classroomId,
+          programmeId: programmeId,
+        ),
+      );
 
   /// The evidence recorded for one assignment, or null when nothing has been
   /// submitted yet. A missing document is the normal starting state.
@@ -317,13 +353,9 @@ class FirestoreService {
     required String classroomId,
     required String programmeId,
     required AssignmentEvidence evidence,
-  }) =>
-      _submissionDoc(
-        uid: uid,
-        classroomId: classroomId,
-        programmeId: programmeId,
-      ).set(
-        {evidence.assignmentId: evidence.toMap()},
-        SetOptions(merge: true),
-      );
+  }) => _submissionDoc(
+    uid: uid,
+    classroomId: classroomId,
+    programmeId: programmeId,
+  ).set({evidence.assignmentId: evidence.toMap()}, SetOptions(merge: true));
 }
