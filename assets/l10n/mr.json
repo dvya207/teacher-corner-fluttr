@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "अधिक मदत हवी?",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "क्विझ आणि स्पर्धा",
+    "tab_classrooms": "वर्ग",
+    "tab_contests": "स्पर्धा",
+    "tab_events": "कार्यक्रम",
+    "none_in_classroom": "या वर्गात अद्याप कोणतेही कार्य नाही.",
+    "no_classrooms_title": "अद्याप वर्ग नाहीत",
+    "no_classrooms_subtitle": "तुमच्या खात्याशी वर्ग जोडल्यावर कार्ये येथे दिसतील.",
+    "due": "अंतिम तारीख {}",
+    "no_due": "अंतिम तारीख नाही",
+    "questions": "{} प्रश्न",
+    "marks": "{} गुण",
+    "answered": "{} पैकी {} उत्तरे दिली",
+    "previous": "मागील",
+    "next": "पुढील",
+    "submitted": "सादर केले",
+    "scored": "तुम्हाला {} पैकी {} गुण मिळाले",
+    "attempt_number": "प्रयत्न {}",
+    "your_answer": "तुमचे उत्तर",
+    "blank": "रिकामी जागा {}",
+    "image_option": "चित्र पर्याय",
+    "unsupported_question": "या प्रकारच्या प्रश्नाचे उत्तर या अ‍ॅपमध्ये अद्याप देता येत नाही.",
+    "no_questions_title": "अद्याप प्रश्न नाहीत",
+    "no_questions_subtitle": "या क्विझमध्ये उत्तर देण्यासाठी प्रश्न नाहीत.",
+    "cap_reached": "या वर्ग आणि कार्यक्रमासाठी परवानगी असलेले सर्व प्रयत्न संपले आहेत. हा प्रयत्न जतन झाला नाही.",
+    "submit_failed": "हा प्रयत्न जतन करता आला नाही. काहीही नोंदवले गेले नाही.",
+    "no_teacher_record": "हे खाते कोणत्याही शिक्षक नोंदीशी जोडलेले नाही, त्यामुळे प्रयत्न जतन करता येणार नाही."
   }
 }

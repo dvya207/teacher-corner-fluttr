@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:tc_starter/core/models/assignment_evidence.dart';
+import 'package:tc_starter/core/models/assignment.dart';
+import 'package:tc_starter/core/models/quiz_scoring.dart';
 import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/learning_unit.dart';
 import 'package:tc_starter/core/models/programme.dart';
@@ -27,6 +29,9 @@ class FakeFirestoreService extends FirestoreService {
     this.classrooms = const [],
     this.learningUnits = const [],
     this.programmes = const [],
+    this.assignments = const [],
+    this.attemptsAlreadyUsed = 0,
+    this.throwsOnSaveAttempt,
     this.workflows = const [],
     this.throws,
     this.throwsOnClassroom,
@@ -46,6 +51,19 @@ class FakeFirestoreService extends FirestoreService {
   /// the web app. Independent of [teacher] on purpose: the four combinations of
   /// present/absent are all real states and the tests exercise them.
   final TeacherProfile? profile;
+
+  /// `Assignments/{docId}` rows this fake can serve, matched by doc id.
+  final List<Assignment> assignments;
+
+  /// How many attempts the summary already records, so the cap can be exercised
+  /// without a real transaction.
+  final int attemptsAlreadyUsed;
+
+  /// Raised instead of writing, for the transient-failure path.
+  final Object? throwsOnSaveAttempt;
+
+  /// Every attempt this fake was asked to save.
+  final List<Map<String, Object?>> savedAttempts = [];
 
   /// Per-uid teaching records. When set, this WINS over [teacher] and an
   /// unlisted uid resolves to null rather than to somebody else's record.
@@ -153,8 +171,6 @@ class FakeFirestoreService extends FirestoreService {
     return profile;
   }
 
-
-
   /// NOT overridden: the real implementation composes the two reads above, so
   /// letting it run is what keeps the fake honest about the join. Overriding it
   /// would let a test pass while `fetchTeacherAccount` was wired up wrongly.
@@ -204,6 +220,65 @@ class FakeFirestoreService extends FirestoreService {
       if (programme.programmeId == programmeId) return programme;
     }
     return null;
+  }
+
+  @override
+  Future<List<Assignment>> fetchAssignments(
+    Iterable<String> assignmentIds, {
+    Map<String, DateTime?> dueDates = const {},
+  }) async {
+    final wanted = assignmentIds.toSet();
+
+    return assignments
+        .where((a) => wanted.contains(a.docId))
+        .map(
+          (a) => Assignment.fromMap(a.docId, {
+            'displayName': a.displayName,
+            'type': a.type,
+            'status': a.status,
+            'numberOfAllowedSubmissions': a.allowedSubmissions,
+          }, dueDate: dueDates[a.docId]),
+        )
+        .toList();
+  }
+
+  @override
+  Future<QuizAttemptResult> saveQuizAttempt({
+    required String teacherDocId,
+    required String uid,
+    required String classroomId,
+    required String programmeId,
+    required String workflowId,
+    required Assignment assignment,
+    required List<QuizAnswer> answers,
+    required String userAgent,
+  }) async {
+    if (throwsOnSaveAttempt != null) throw throwsOnSaveAttempt!;
+
+    // The cap check the real transaction performs, so a test can reach the
+    // sentinel without standing in for Firestore.
+    if (attemptsAlreadyUsed >= assignment.allowedSubmissions) {
+      throw Exception(FirestoreService.maxAttemptsReached);
+    }
+
+    final marks = attemptMarks(assignment.questions, answers);
+
+    savedAttempts.add({
+      'teacherDocId': teacherDocId,
+      'uid': uid,
+      'classroomId': classroomId,
+      'programmeId': programmeId,
+      'assignmentId': assignment.docId,
+      'studentScore': marks.studentScore,
+      'maxScore': marks.maxScore,
+    });
+
+    return QuizAttemptResult(
+      attemptId: 'attempt${attemptsAlreadyUsed + 1}',
+      attemptNumber: attemptsAlreadyUsed + 1,
+      studentScore: marks.studentScore,
+      maxScore: marks.maxScore,
+    );
   }
 
   @override

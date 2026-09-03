@@ -14,6 +14,8 @@ import '../../features/learning_unit/missing_workflow_screen.dart';
 import '../../features/learning_unit/learning_unit_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
+import '../../features/quizzes/quizzes_provider.dart';
+import '../../features/quizzes/quizzes_screen.dart';
 import '../../features/shell/not_built_screen.dart';
 import '../../features/profile/help_guide_screen.dart';
 import '../../features/splash/splash_screen.dart';
@@ -144,8 +146,7 @@ class AppRouter {
                       builder: (context, state) {
                         final programmeId =
                             state.pathParameters['programmeId']!;
-                        return ChangeNotifierProvider<
-                            ProgrammeDetailProvider>(
+                        return ChangeNotifierProvider<ProgrammeDetailProvider>(
                           create: (ctx) => ProgrammeDetailProvider(
                             firestore: ctx.read<FirestoreService>(),
                           ),
@@ -169,10 +170,16 @@ class AppRouter {
             // shape, and honest about being outside this slice.
             GoRoute(
               path: '/quizzes',
-              builder: (context, state) => const NotBuiltScreen(
-                titleKey: 'nav.quizzes',
-                icon: Icons.quiz_outlined,
-              ),
+              // PER ROUTE, like the classroom detail below it: leaving the tab
+              // and coming back should re-read rather than show a list built
+              // before an assignment was set.
+              builder: (context, state) =>
+                  ChangeNotifierProvider<QuizzesProvider>(
+                    create: (ctx) => QuizzesProvider(
+                      firestore: ctx.read<FirestoreService>(),
+                    ),
+                    child: const QuizzesScreen(),
+                  ),
             ),
             GoRoute(
               path: '/reports',
@@ -210,9 +217,8 @@ class AppRouter {
             }
             final query = state.uri.queryParameters;
             return ChangeNotifierProvider<LearningUnitProvider>(
-              create: (ctx) => LearningUnitProvider(
-                firestore: ctx.read<FirestoreService>(),
-              ),
+              create: (ctx) =>
+                  LearningUnitProvider(firestore: ctx.read<FirestoreService>()),
               child: LearningUnitScreen(
                 learningUnitId: learningUnitId,
                 workflowId: workflowId,

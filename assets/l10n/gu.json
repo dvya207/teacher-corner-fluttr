@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "વધુ મદદ જોઈએ?",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "ક્વિઝ અને સ્પર્ધાઓ",
+    "tab_classrooms": "વર્ગો",
+    "tab_contests": "સ્પર્ધાઓ",
+    "tab_events": "કાર્યક્રમો",
+    "none_in_classroom": "આ વર્ગમાં હજી કોઈ કાર્ય નથી.",
+    "no_classrooms_title": "હજી કોઈ વર્ગ નથી",
+    "no_classrooms_subtitle": "તમારા ખાતા સાથે વર્ગ જોડાયા પછી કાર્યો અહીં દેખાશે.",
+    "due": "અંતિમ તારીખ {}",
+    "no_due": "અંતિમ તારીખ નથી",
+    "questions": "{} પ્રશ્નો",
+    "marks": "{} ગુણ",
+    "answered": "{} માંથી {} જવાબ આપ્યા",
+    "previous": "પાછલું",
+    "next": "આગળ",
+    "submitted": "સબમિટ થયું",
+    "scored": "તમે {} માંથી {} ગુણ મેળવ્યા",
+    "attempt_number": "પ્રયાસ {}",
+    "your_answer": "તમારો જવાબ",
+    "blank": "ખાલી જગ્યા {}",
+    "image_option": "ચિત્ર વિકલ્પ",
+    "unsupported_question": "આ પ્રકારના પ્રશ્નનો જવાબ આ એપમાં હજી આપી શકાતો નથી.",
+    "no_questions_title": "હજી કોઈ પ્રશ્ન નથી",
+    "no_questions_subtitle": "આ ક્વિઝમાં જવાબ આપવા માટે કોઈ પ્રશ્ન નથી.",
+    "cap_reached": "આ વર્ગ અને કાર્યક્રમ માટે માન્ય તમામ પ્રયાસો વપરાઈ ગયા છે. આ પ્રયાસ સાચવાયો નથી.",
+    "submit_failed": "આ પ્રયાસ સાચવી શકાયો નથી. કંઈ નોંધાયું નથી.",
+    "no_teacher_record": "આ ખાતું કોઈ શિક્ષક રેકોર્ડ સાથે જોડાયેલું નથી, તેથી પ્રયાસ સાચવી શકાશે નહીં."
   }
 }

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../firebase/firestore_ref.dart';
+import '../models/assignment.dart';
+import '../models/quiz_scoring.dart';
 import '../models/assignment_evidence.dart';
 import '../models/classroom.dart';
 import '../models/learning_unit.dart';
@@ -280,6 +282,180 @@ class FirestoreService {
     return results.whereType<LearningUnit>().toList();
   }
 
+  /// The teacher record linked to this account, or null when there is none.
+  ///
+  /// `teacherMeta.uid`, NOT `ownerId`. Those are different people by design:
+  /// ownerId is whoever registered the teacher, normally a coordinator acting for
+  /// somebody else, and matching on it would attribute a teacher's work to their
+  /// administrator. A single where(), so it needs no composite index.
+  Future<String?> fetchTeacherDocIdFor(String uid) async {
+    if (uid.trim().isEmpty) return null;
+
+    final snap = await _db
+        .collection(Teacher.collection)
+        .where('teacherMeta.uid', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    return snap.docs.isEmpty ? null : snap.docs.first.id;
+  }
+
+  /// Assignments by id, dropping any that do not exist.
+  ///
+  /// PER-DOCUMENT READS rather than a whereIn, for the same reason
+  /// [fetchClassrooms] uses them: a missing row degrades on its own, and whereIn
+  /// caps at 30 ids. Reserved ids are skipped before the read — `--schema--` and
+  /// `--default_assignments--` are reference documents that exist in this
+  /// collection and are not assignments.
+  Future<List<Assignment>> fetchAssignments(
+    Iterable<String> assignmentIds, {
+    Map<String, DateTime?> dueDates = const {},
+  }) async {
+    final ids = assignmentIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty && !Assignment.reservedIds.contains(id))
+        .toSet()
+        .toList();
+
+    if (ids.isEmpty) return const [];
+
+    final results = await Future.wait(
+      ids.map((id) async {
+        final snap = await _db.collection(Assignment.collection).doc(id).get();
+
+        if (!snap.exists) return null;
+
+        return Assignment.fromMap(
+          snap.id,
+          snap.data() ?? const <String, dynamic>{},
+          dueDate: dueDates[id],
+        );
+      }),
+    );
+
+    return results.whereType<Assignment>().toList();
+  }
+
+  /// Thrown when the classroom and programme have used every allowed attempt.
+  ///
+  /// A SENTINEL RATHER THAN A BOOLEAN RETURN, because the caller has to tell it
+  /// apart from a refused write to say anything useful, and the check happens
+  /// inside a transaction where returning normally would still commit.
+  static const String maxAttemptsReached = 'MAX_ATTEMPTS_REACHED';
+
+  /// Writes one quiz attempt, in the web app's exact shape.
+  ///
+  ///     teachers/{teacherDocId}/submissions/{classroomId}-{programmeId}
+  ///        + attempts/attempt{N}
+  ///        + submissionMeta/{autoId}
+  ///
+  /// THE SUMMARY IS PER CLASSROOM AND PROGRAMME, NOT PER QUIZ. That is
+  /// production's own choice and the web app copies it, so `attemptsCount` and
+  /// the cap span every quiz set in that classroom and programme. Surprising, and
+  /// changing it here would make the two apps disagree about how many attempts
+  /// are left.
+  ///
+  /// THE CAP IS CHECKED INSIDE THE TRANSACTION, not just before it, or two
+  /// devices could each pass a pre-check and both write.
+  ///
+  /// `latestAttempt` CARRIES EVERYTHING BUT THE QUESTIONS. The summary is read
+  /// every time the list is shown, and dragging a whole question set through that
+  /// read for a figure the list does not display would be paid for on every load.
+  Future<QuizAttemptResult> saveQuizAttempt({
+    required String teacherDocId,
+    required String uid,
+    required String classroomId,
+    required String programmeId,
+    required String workflowId,
+    required Assignment assignment,
+    required List<QuizAnswer> answers,
+    required String userAgent,
+  }) async {
+    final summary = _db
+        .collection(Teacher.collection)
+        .doc(teacherDocId)
+        .collection(AssignmentEvidence.submissionsSubcollection)
+        .doc('$classroomId-$programmeId');
+
+    final marks = attemptMarks(assignment.questions, answers);
+    final stamped = stampAnswers(assignment.questions, answers);
+    final percentage = attemptPercentage(marks);
+
+    return _db.runTransaction<QuizAttemptResult>((transaction) async {
+      final snapshot = await transaction.get(summary);
+      final used = snapshot.exists
+          ? (snapshot.data()?['attemptsCount'] as num?)?.toInt() ?? 0
+          : 0;
+
+      if (used >= assignment.allowedSubmissions) {
+        throw Exception(maxAttemptsReached);
+      }
+
+      final attemptNumber = used + 1;
+      final attemptId = 'attempt$attemptNumber';
+
+      // Everything the attempt stores EXCEPT the questions, which is exactly
+      // what production embeds in the summary.
+      final withoutQuestions = <String, dynamic>{
+        'studentScore': marks.studentScore,
+        'maxScore': marks.maxScore,
+        'displayName': assignment.displayName,
+        'totalQuestions': assignment.questions.length,
+        'id': assignment.docId,
+        'totalDurationInHours': 0,
+        'totalDurationInMinutes': assignment.totalMinutes,
+        'totalDurationInSeconds': 0,
+        'userAgent': userAgent,
+      };
+
+      transaction.set(summary, {
+        'teacherId': uid,
+        'classroomId': classroomId,
+        'programmeId': programmeId,
+        'workflowId': workflowId.isEmpty ? null : workflowId,
+        'assignmentId': assignment.docId,
+        'displayName': assignment.displayName,
+        'totalQuestions': assignment.questions.length,
+        'maxScore': marks.maxScore,
+        'attemptsCount': attemptNumber,
+        'latestAttemptId': attemptId,
+        'latestAttempt': {
+          'attemptId': attemptId,
+          'attemptNumber': attemptNumber,
+          'lastAttemptTime': FieldValue.serverTimestamp(),
+          'percentage': percentage,
+          ...withoutQuestions,
+        },
+        'lastAttemptTime': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      transaction.set(summary.collection('attempts').doc(attemptId), {
+        'attemptId': attemptId,
+        'attemptNumber': attemptNumber,
+        'lastAttemptTime': FieldValue.serverTimestamp(),
+        'questions': stamped,
+        ...withoutQuestions,
+      }, SetOptions(merge: true));
+
+      // THE META ROW. Production writes a client IP from its own device-info
+      // service; there is none here, so the field is written empty rather than
+      // guessed or omitted — its readers expect the key.
+      transaction.set(summary.collection('submissionMeta').doc(), {
+        'attemptId': attemptId,
+        'clientIp': '',
+        'submissionTime': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      return QuizAttemptResult(
+        attemptId: attemptId,
+        attemptNumber: attemptNumber,
+        studentScore: marks.studentScore,
+        maxScore: marks.maxScore,
+      );
+    });
+  }
+
   // ── Evidence ───────────────────────────────────────────────────────────────
 
   /// `users/{uid}/submissions/{classroomId}-{programmeId}`.
@@ -358,4 +534,19 @@ class FirestoreService {
     classroomId: classroomId,
     programmeId: programmeId,
   ).set({evidence.assignmentId: evidence.toMap()}, SetOptions(merge: true));
+}
+
+/// What a saved attempt reports back to the screen.
+class QuizAttemptResult {
+  const QuizAttemptResult({
+    required this.attemptId,
+    required this.attemptNumber,
+    required this.studentScore,
+    required this.maxScore,
+  });
+
+  final String attemptId;
+  final int attemptNumber;
+  final double studentScore;
+  final int maxScore;
 }

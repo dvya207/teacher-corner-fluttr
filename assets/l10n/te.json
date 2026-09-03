@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "మరింత సహాయం కావాలా?",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "క్విజ్‌లు మరియు పోటీలు",
+    "tab_classrooms": "తరగతులు",
+    "tab_contests": "పోటీలు",
+    "tab_events": "కార్యక్రమాలు",
+    "none_in_classroom": "ఈ తరగతిలో ఇంకా పనులు లేవు.",
+    "no_classrooms_title": "ఇంకా తరగతులు లేవు",
+    "no_classrooms_subtitle": "మీ ఖాతాకు తరగతి అనుసంధానమైన తర్వాత పనులు ఇక్కడ కనిపిస్తాయి.",
+    "due": "గడువు {}",
+    "no_due": "గడువు తేదీ లేదు",
+    "questions": "{} ప్రశ్నలు",
+    "marks": "{} మార్కులు",
+    "answered": "{} / {} సమాధానం ఇచ్చారు",
+    "previous": "మునుపటి",
+    "next": "తదుపరి",
+    "submitted": "సమర్పించబడింది",
+    "scored": "మీరు {} / {} మార్కులు సాధించారు",
+    "attempt_number": "ప్రయత్నం {}",
+    "your_answer": "మీ సమాధానం",
+    "blank": "ఖాళీ {}",
+    "image_option": "చిత్ర ఎంపిక",
+    "unsupported_question": "ఈ రకమైన ప్రశ్నకు ఈ యాప్‌లో ఇంకా సమాధానం ఇవ్వలేరు.",
+    "no_questions_title": "ఇంకా ప్రశ్నలు లేవు",
+    "no_questions_subtitle": "ఈ క్విజ్‌లో సమాధానం ఇవ్వడానికి ప్రశ్నలు లేవు.",
+    "cap_reached": "ఈ తరగతి మరియు కార్యక్రమానికి అనుమతించిన అన్ని సమర్పణలు పూర్తయ్యాయి. ఈ ప్రయత్నం సేవ్ కాలేదు.",
+    "submit_failed": "ఈ ప్రయత్నాన్ని సేవ్ చేయలేకపోయాము. ఏమీ నమోదు కాలేదు.",
+    "no_teacher_record": "ఈ ఖాతా ఏ ఉపాధ్యాయ రికార్డుతోనూ అనుసంధానించబడలేదు, కాబట్టి ప్రయత్నాన్ని సేవ్ చేయలేరు."
   }
 }

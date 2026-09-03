@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "ଅଧିକ ସହାୟତା ଦରକାର?",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "କୁଇଜ୍ ଏବଂ ପ୍ରତିଯୋଗିତା",
+    "tab_classrooms": "ଶ୍ରେଣୀ",
+    "tab_contests": "ପ୍ରତିଯୋଗିତା",
+    "tab_events": "କାର୍ଯ୍ୟକ୍ରମ",
+    "none_in_classroom": "ଏହି ଶ୍ରେଣୀରେ ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି କାର୍ଯ୍ୟ ନାହିଁ।",
+    "no_classrooms_title": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଶ୍ରେଣୀ ନାହିଁ",
+    "no_classrooms_subtitle": "ଆପଣଙ୍କ ଖାତା ସହ ଶ୍ରେଣୀ ଯୋଡ଼ାଯିବା ପରେ କାର୍ଯ୍ୟ ଏଠାରେ ଦେଖାଯିବ।",
+    "due": "ଶେଷ ତାରିଖ {}",
+    "no_due": "ଶେଷ ତାରିଖ ନାହିଁ",
+    "questions": "{} ପ୍ରଶ୍ନ",
+    "marks": "{} ନମ୍ବର",
+    "answered": "{} ମଧ୍ୟରୁ {} ଉତ୍ତର ଦିଆଯାଇଛି",
+    "previous": "ପୂର୍ବବର୍ତ୍ତୀ",
+    "next": "ପରବର୍ତ୍ତୀ",
+    "submitted": "ଦାଖଲ ହୋଇଛି",
+    "scored": "ଆପଣ {} ମଧ୍ୟରୁ {} ନମ୍ବର ପାଇଛନ୍ତି",
+    "attempt_number": "ପ୍ରୟାସ {}",
+    "your_answer": "ଆପଣଙ୍କ ଉତ୍ତର",
+    "blank": "ଖାଲି ସ୍ଥାନ {}",
+    "image_option": "ଚିତ୍ର ବିକଳ୍ପ",
+    "unsupported_question": "ଏହି ପ୍ରକାରର ପ୍ରଶ୍ନର ଉତ୍ତର ଏହି ଆପରେ ଏପର୍ଯ୍ୟନ୍ତ ଦିଆଯାଇପାରିବ ନାହିଁ।",
+    "no_questions_title": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ପ୍ରଶ୍ନ ନାହିଁ",
+    "no_questions_subtitle": "ଏହି କୁଇଜ୍‌ରେ ଉତ୍ତର ଦେବାକୁ କୌଣସି ପ୍ରଶ୍ନ ନାହିଁ।",
+    "cap_reached": "ଏହି ଶ୍ରେଣୀ ଓ କାର୍ଯ୍ୟକ୍ରମ ପାଇଁ ଅନୁମତିପ୍ରାପ୍ତ ସମସ୍ତ ଦାଖଲ ସରିଯାଇଛି। ଏହି ପ୍ରୟାସ ସଞ୍ଚୟ ହୋଇନାହିଁ।",
+    "submit_failed": "ଏହି ପ୍ରୟାସ ସଞ୍ଚୟ କରାଯାଇପାରିଲା ନାହିଁ। କିଛି ରେକର୍ଡ ହୋଇନାହିଁ।",
+    "no_teacher_record": "ଏହି ଖାତା କୌଣସି ଶିକ୍ଷକ ରେକର୍ଡ ସହ ସଂଯୁକ୍ତ ନାହିଁ, ତେଣୁ ପ୍ରୟାସ ସଞ୍ଚୟ କରାଯାଇପାରିବ ନାହିଁ।"
   }
 }

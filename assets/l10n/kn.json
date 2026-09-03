@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "ಹೆಚ್ಚಿನ ಸಹಾಯ ಬೇಕೇ?",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "ಕ್ವಿಜ್ ಮತ್ತು ಸ್ಪರ್ಧೆಗಳು",
+    "tab_classrooms": "ತರಗತಿಗಳು",
+    "tab_contests": "ಸ್ಪರ್ಧೆಗಳು",
+    "tab_events": "ಕಾರ್ಯಕ್ರಮಗಳು",
+    "none_in_classroom": "ಈ ತರಗತಿಯಲ್ಲಿ ಇನ್ನೂ ಯಾವುದೇ ಕಾರ್ಯ ಇಲ್ಲ.",
+    "no_classrooms_title": "ಇನ್ನೂ ತರಗತಿಗಳಿಲ್ಲ",
+    "no_classrooms_subtitle": "ನಿಮ್ಮ ಖಾತೆಗೆ ತರಗತಿ ಸೇರಿದ ನಂತರ ಕಾರ್ಯಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
+    "due": "ಕೊನೆಯ ದಿನಾಂಕ {}",
+    "no_due": "ಕೊನೆಯ ದಿನಾಂಕ ಇಲ್ಲ",
+    "questions": "{} ಪ್ರಶ್ನೆಗಳು",
+    "marks": "{} ಅಂಕಗಳು",
+    "answered": "{} / {} ಉತ್ತರಿಸಲಾಗಿದೆ",
+    "previous": "ಹಿಂದಿನದು",
+    "next": "ಮುಂದಿನದು",
+    "submitted": "ಸಲ್ಲಿಸಲಾಗಿದೆ",
+    "scored": "ನೀವು {} / {} ಅಂಕ ಗಳಿಸಿದ್ದೀರಿ",
+    "attempt_number": "ಪ್ರಯತ್ನ {}",
+    "your_answer": "ನಿಮ್ಮ ಉತ್ತರ",
+    "blank": "ಖಾಲಿ ಜಾಗ {}",
+    "image_option": "ಚಿತ್ರ ಆಯ್ಕೆ",
+    "unsupported_question": "ಈ ಬಗೆಯ ಪ್ರಶ್ನೆಗೆ ಈ ಆ್ಯಪ್‌ನಲ್ಲಿ ಇನ್ನೂ ಉತ್ತರಿಸಲಾಗುವುದಿಲ್ಲ.",
+    "no_questions_title": "ಇನ್ನೂ ಪ್ರಶ್ನೆಗಳಿಲ್ಲ",
+    "no_questions_subtitle": "ಈ ಕ್ವಿಜ್‌ನಲ್ಲಿ ಉತ್ತರಿಸಲು ಪ್ರಶ್ನೆಗಳಿಲ್ಲ.",
+    "cap_reached": "ಈ ತರಗತಿ ಮತ್ತು ಕಾರ್ಯಕ್ರಮಕ್ಕೆ ಅನುಮತಿಸಿದ ಎಲ್ಲಾ ಸಲ್ಲಿಕೆಗಳು ಮುಗಿದಿವೆ. ಈ ಪ್ರಯತ್ನ ಉಳಿಸಲಾಗಿಲ್ಲ.",
+    "submit_failed": "ಈ ಪ್ರಯತ್ನವನ್ನು ಉಳಿಸಲಾಗಲಿಲ್ಲ. ಏನೂ ದಾಖಲಾಗಿಲ್ಲ.",
+    "no_teacher_record": "ಈ ಖಾತೆ ಯಾವುದೇ ಶಿಕ್ಷಕ ದಾಖಲೆಗೆ ಸಂಬಂಧಿಸಿಲ್ಲ, ಆದ್ದರಿಂದ ಪ್ರಯತ್ನವನ್ನು ಉಳಿಸಲಾಗುವುದಿಲ್ಲ."
   }
 }

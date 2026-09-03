@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "Need more help?",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "Quizzes & Contests",
+    "tab_classrooms": "Classrooms",
+    "tab_contests": "Contests",
+    "tab_events": "Events",
+    "none_in_classroom": "No assignments in this classroom yet.",
+    "no_classrooms_title": "No classrooms yet",
+    "no_classrooms_subtitle": "Assignments appear here once a classroom is linked to your account.",
+    "due": "Due {}",
+    "no_due": "No due date",
+    "questions": "{} questions",
+    "marks": "{} marks",
+    "answered": "{} of {} answered",
+    "previous": "Previous",
+    "next": "Next",
+    "submitted": "Submitted",
+    "scored": "You scored {} of {}",
+    "attempt_number": "Attempt {}",
+    "your_answer": "Your answer",
+    "blank": "Blank {}",
+    "image_option": "Image option",
+    "unsupported_question": "This question type cannot be answered in this app yet.",
+    "no_questions_title": "No questions yet",
+    "no_questions_subtitle": "This quiz has no questions to answer.",
+    "cap_reached": "Every allowed submission for this classroom and programme has been used. This attempt was not saved.",
+    "submit_failed": "Could not save this attempt. Nothing was recorded.",
+    "no_teacher_record": "This account is not linked to a teacher record, so an attempt cannot be saved."
   }
 }

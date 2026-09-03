@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "مزید مدد چاہیے؟",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "کوئز اور مقابلے",
+    "tab_classrooms": "کلاسیں",
+    "tab_contests": "مقابلے",
+    "tab_events": "تقریبات",
+    "none_in_classroom": "اس کلاس میں ابھی کوئی اسائنمنٹ نہیں ہے۔",
+    "no_classrooms_title": "ابھی کوئی کلاس نہیں",
+    "no_classrooms_subtitle": "آپ کے اکاؤنٹ سے کلاس منسلک ہونے پر اسائنمنٹس یہاں نظر آئیں گے۔",
+    "due": "آخری تاریخ {}",
+    "no_due": "آخری تاریخ نہیں",
+    "questions": "{} سوالات",
+    "marks": "{} نمبر",
+    "answered": "{} میں سے {} کے جواب دیے",
+    "previous": "پچھلا",
+    "next": "اگلا",
+    "submitted": "جمع ہو گیا",
+    "scored": "آپ نے {} میں سے {} نمبر حاصل کیے",
+    "attempt_number": "کوشش {}",
+    "your_answer": "آپ کا جواب",
+    "blank": "خالی جگہ {}",
+    "image_option": "تصویری انتخاب",
+    "unsupported_question": "اس قسم کے سوال کا جواب اس ایپ میں ابھی نہیں دیا جا سکتا۔",
+    "no_questions_title": "ابھی کوئی سوال نہیں",
+    "no_questions_subtitle": "اس کوئز میں جواب دینے کے لیے کوئی سوال نہیں۔",
+    "cap_reached": "اس کلاس اور پروگرام کے لیے تمام مجاز کوششیں ختم ہو چکی ہیں۔ یہ کوشش محفوظ نہیں ہوئی۔",
+    "submit_failed": "یہ کوشش محفوظ نہیں کی جا سکی۔ کچھ ریکارڈ نہیں ہوا۔",
+    "no_teacher_record": "یہ اکاؤنٹ کسی استاد ریکارڈ سے منسلک نہیں، اس لیے کوشش محفوظ نہیں کی جا سکتی۔"
   }
 }

@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "और मदद चाहिए?",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "प्रश्नोत्तरी और प्रतियोगिताएँ",
+    "tab_classrooms": "कक्षाएँ",
+    "tab_contests": "प्रतियोगिताएँ",
+    "tab_events": "कार्यक्रम",
+    "none_in_classroom": "इस कक्षा में अभी कोई असाइनमेंट नहीं है।",
+    "no_classrooms_title": "अभी कोई कक्षा नहीं",
+    "no_classrooms_subtitle": "आपके खाते से कक्षा जुड़ने पर असाइनमेंट यहाँ दिखेंगे।",
+    "due": "नियत तिथि {}",
+    "no_due": "कोई नियत तिथि नहीं",
+    "questions": "{} प्रश्न",
+    "marks": "{} अंक",
+    "answered": "{} में से {} उत्तर दिए",
+    "previous": "पिछला",
+    "next": "अगला",
+    "submitted": "जमा हो गया",
+    "scored": "आपने {} में से {} अंक प्राप्त किए",
+    "attempt_number": "प्रयास {}",
+    "your_answer": "आपका उत्तर",
+    "blank": "रिक्त स्थान {}",
+    "image_option": "चित्र विकल्प",
+    "unsupported_question": "इस प्रकार के प्रश्न का उत्तर अभी इस ऐप में नहीं दिया जा सकता।",
+    "no_questions_title": "अभी कोई प्रश्न नहीं",
+    "no_questions_subtitle": "इस प्रश्नोत्तरी में उत्तर देने के लिए कोई प्रश्न नहीं है।",
+    "cap_reached": "इस कक्षा और कार्यक्रम के लिए सभी अनुमत प्रयास समाप्त हो चुके हैं। यह प्रयास सहेजा नहीं गया।",
+    "submit_failed": "यह प्रयास सहेजा नहीं जा सका। कुछ भी दर्ज नहीं हुआ।",
+    "no_teacher_record": "यह खाता किसी शिक्षक रिकॉर्ड से जुड़ा नहीं है, इसलिए प्रयास सहेजा नहीं जा सकता।"
   }
 }

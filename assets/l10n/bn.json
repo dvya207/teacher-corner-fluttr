@@ -256,5 +256,33 @@
     "access_3": "Share the access code with the student so they can log in to the unLab app.",
     "more_title": "আরও সহায়তা দরকার?",
     "more_body": "Contact your programme coordinator or ThinkTac support."
+  },
+  "quizzes": {
+    "title": "কুইজ ও প্রতিযোগিতা",
+    "tab_classrooms": "ক্লাস",
+    "tab_contests": "প্রতিযোগিতা",
+    "tab_events": "ইভেন্ট",
+    "none_in_classroom": "এই ক্লাসে এখনও কোনো অ্যাসাইনমেন্ট নেই।",
+    "no_classrooms_title": "এখনও কোনো ক্লাস নেই",
+    "no_classrooms_subtitle": "আপনার অ্যাকাউন্টে ক্লাস যুক্ত হলে অ্যাসাইনমেন্ট এখানে দেখা যাবে।",
+    "due": "শেষ তারিখ {}",
+    "no_due": "শেষ তারিখ নেই",
+    "questions": "{}টি প্রশ্ন",
+    "marks": "{} নম্বর",
+    "answered": "{} এর মধ্যে {} উত্তর দেওয়া হয়েছে",
+    "previous": "আগের",
+    "next": "পরবর্তী",
+    "submitted": "জমা হয়েছে",
+    "scored": "আপনি {} এর মধ্যে {} নম্বর পেয়েছেন",
+    "attempt_number": "প্রচেষ্টা {}",
+    "your_answer": "আপনার উত্তর",
+    "blank": "শূন্যস্থান {}",
+    "image_option": "ছবি বিকল্প",
+    "unsupported_question": "এই ধরনের প্রশ্নের উত্তর এই অ্যাপে এখনও দেওয়া যায় না।",
+    "no_questions_title": "এখনও কোনো প্রশ্ন নেই",
+    "no_questions_subtitle": "এই কুইজে উত্তর দেওয়ার মতো কোনো প্রশ্ন নেই।",
+    "cap_reached": "এই ক্লাস ও প্রোগ্রামের জন্য অনুমোদিত সব জমা শেষ হয়ে গেছে। এই প্রচেষ্টা সংরক্ষিত হয়নি।",
+    "submit_failed": "এই প্রচেষ্টা সংরক্ষণ করা যায়নি। কিছুই নথিভুক্ত হয়নি।",
+    "no_teacher_record": "এই অ্যাকাউন্ট কোনো শিক্ষক রেকর্ডের সঙ্গে যুক্ত নয়, তাই প্রচেষ্টা সংরক্ষণ করা যাবে না।"
   }
 }
