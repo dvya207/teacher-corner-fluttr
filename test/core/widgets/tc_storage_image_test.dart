@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tc_starter/core/services/storage_image_source.dart';
+import 'package:tc_starter/core/services/storage_file_source.dart';
 import 'package:tc_starter/core/widgets/tc_storage_image.dart';
 
 import '../../support/pump_app.dart';
@@ -16,7 +16,7 @@ final _pngBytes = base64Decode(
 
 /// Records exactly which of the two calls were made, which is the contract
 /// under test: a cache hit must cost NO url resolution.
-class RecordingSource implements StorageImageSource {
+class RecordingSource implements StorageFileSource {
   RecordingSource({this.cachedFile, this.url = 'https://example/x?token=abc',
       this.resolveThrows});
 
@@ -27,6 +27,7 @@ class RecordingSource implements StorageImageSource {
   final List<String> cachedCalls = [];
   final List<String> resolveCalls = [];
   final List<String> keyCalls = [];
+  final List<String> downloadCalls = [];
 
   @override
   Future<File?> cached(String storagePath) async {
@@ -39,6 +40,16 @@ class RecordingSource implements StorageImageSource {
     resolveCalls.add(storagePath);
     if (resolveThrows != null) throw resolveThrows!;
     return url;
+  }
+
+  /// Unused by the image widget, which wants a URL rather than a file. Here
+  /// because the interface serves the PDF and video viewers too.
+  @override
+  Future<File> download(String storagePath) async {
+    downloadCalls.add(storagePath);
+    final file = cachedFile;
+    if (file == null) throw StateError('nothing to download');
+    return file;
   }
 
   @override

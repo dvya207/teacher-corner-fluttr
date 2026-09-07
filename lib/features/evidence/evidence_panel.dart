@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/photo_picker.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimensions.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/tc_button.dart';
@@ -73,25 +74,65 @@ class _EvidencePanelState extends State<EvidencePanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('evidence.title'.tr(), style: AppTypography.sectionTitle),
-          SizedBox(height: 2.h),
-          Text('evidence.intro'.tr(), style: AppTypography.caption),
-          SizedBox(height: AppDimensions.spacing8),
-
-          // Stated up front, not after the teacher has been refused.
-          Text(
-            'evidence.limit'.tr(args: [
-              '$kMaxEvidencePhotos',
-              '${kMaxEvidenceBytes ~/ 1048576}',
-            ]),
-            style: AppTypography.tiny,
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            'evidence.counter'.tr(
-              args: ['${provider.totalCount}', '$kMaxEvidencePhotos'],
-            ),
-            style: AppTypography.tiny,
+          // A HEADER ROW, NOT A STACK OF FOUR TEXTS. This block used to be a
+          // title, an intro, the size limit and the count, each on its own
+          // line, which put four lines of small grey type above the only two
+          // controls that do anything. The count is the fact a teacher checks
+          // ("have I done this one?"), so it is what sits beside the title, and
+          // the limits move to a single line under the buttons where they are
+          // read at the moment they matter.
+          Row(
+            children: [
+              Container(
+                width: 44.r,
+                height: 44.r,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  // Green once anything is in, grey while it is empty, so the
+                  // step's state is legible without reading the number.
+                  color: provider.isEmpty
+                      ? AppColors.borderSubtle
+                      : AppColors.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(
+                    AppDimensions.radiusCard,
+                  ),
+                ),
+                child: Icon(
+                  provider.isEmpty
+                      ? Icons.photo_camera_outlined
+                      : Icons.check_circle_rounded,
+                  size: 24.r,
+                  color: provider.isEmpty
+                      ? AppColors.textTertiary
+                      : AppColors.success,
+                ),
+              ),
+              SizedBox(width: AppDimensions.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'evidence.title'.tr(),
+                      style: AppTypography.heading3,
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'evidence.submitted_of'.tr(
+                        args: [
+                          '${provider.submitted.length}',
+                          '$kMaxEvidencePhotos',
+                        ],
+                      ),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
 
           if (provider.errorKey != null) ...[
@@ -104,6 +145,8 @@ class _EvidencePanelState extends State<EvidencePanel> {
           ],
 
           SizedBox(height: AppDimensions.spacing16),
+          Text('evidence.intro'.tr(), style: AppTypography.caption),
+          SizedBox(height: AppDimensions.spacing12),
           // Both sources, always. A teacher may be photographing the desk in
           // front of them or adding a shot from earlier in the lesson.
           Row(
@@ -130,6 +173,20 @@ class _EvidencePanelState extends State<EvidencePanel> {
                 ),
               ),
             ],
+          ),
+
+          SizedBox(height: AppDimensions.spacing8),
+          // ONE LINE, UNDER THE BUTTONS, and stated before a refusal rather
+          // than after one. Format, size and count together: all three are
+          // reasons a pick can be rejected, and a teacher who has just been
+          // refused should not have to hunt for which one they hit.
+          Text(
+            'evidence.format_limits'.tr(args: [
+              '${kMaxEvidenceBytes ~/ 1048576}',
+              '$kMaxEvidencePhotos',
+            ]),
+            style: AppTypography.tiny,
+            textAlign: TextAlign.center,
           ),
 
           if (provider.isEmpty) ...[

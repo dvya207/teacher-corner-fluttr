@@ -9,7 +9,9 @@ import 'package:tc_starter/core/models/programme.dart';
 import 'package:tc_starter/core/models/teacher.dart';
 import 'package:tc_starter/core/models/teacher_account.dart';
 import 'package:tc_starter/core/models/teacher_profile.dart';
+import 'package:tc_starter/core/models/learning_unit_resources.dart';
 import 'package:tc_starter/core/models/workflow.dart';
+import 'package:tc_starter/core/models/workflow_progress.dart';
 import 'package:tc_starter/core/services/firestore_service.dart';
 import 'package:tc_starter/features/auth/auth_provider.dart';
 
@@ -33,6 +35,8 @@ class FakeFirestoreService extends FirestoreService {
     this.attemptsAlreadyUsed = 0,
     this.throwsOnSaveAttempt,
     this.workflows = const [],
+    this.progress = const {},
+    this.unitResources = const LearningUnitResources(),
     this.throws,
     this.throwsOnClassroom,
     this.throwsOnLearningUnit,
@@ -93,6 +97,19 @@ class FakeFirestoreService extends FirestoreService {
   /// the detail screen renders as not-found.
   final List<Programme> programmes;
   final List<Workflow> workflows;
+
+  /// What `learningUnitResources` holds for whichever unit is asked for.
+  final LearningUnitResources unitResources;
+
+  /// Stored progress, keyed by learning unit id. Writes land here too, so a
+  /// test can mark a step done and then assert on what a reload would see.
+  final Map<String, WorkflowProgress> progress;
+
+  /// Every progress write this fake received, in order.
+  final List<Set<String>> progressWrites = [];
+
+  /// Set to make the next progress write fail, for the rollback path.
+  Object? throwsOnProgressWrite;
 
   /// Thrown by [fetchTeacher] when set, to exercise the error state.
   final Object? throws;
@@ -290,6 +307,36 @@ class FakeFirestoreService extends FirestoreService {
       if (unit.learningUnitId == learningUnitId) return unit;
     }
     return null;
+  }
+
+  @override
+  @override
+  Future<LearningUnitResources> fetchLearningUnitResources(
+    String learningUnitDocId,
+  ) async => unitResources;
+
+  @override
+  Future<WorkflowProgress> fetchWorkflowProgress({
+    required String uid,
+    required String classroomId,
+    required String learningUnitId,
+  }) async => progress[learningUnitId] ?? const WorkflowProgress();
+
+  @override
+  Future<Map<String, WorkflowProgress>> fetchClassroomProgress({
+    required String uid,
+    required String classroomId,
+  }) async => progress;
+
+  @override
+  Future<void> setWorkflowStepDone({
+    required String uid,
+    required String classroomId,
+    required String learningUnitId,
+    required Set<String> completedStepIds,
+  }) async {
+    if (throwsOnProgressWrite != null) throw throwsOnProgressWrite!;
+    progressWrites.add(completedStepIds);
   }
 
   @override

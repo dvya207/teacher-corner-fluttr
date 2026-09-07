@@ -23,11 +23,31 @@ class TcSectionLabel extends StatelessWidget {
         child: label,
       );
     }
+    // THE LABEL YIELDS, THE TRAILING DOES NOT. At the 1.3x font ceiling a
+    // letter-spaced caps heading and its affordance no longer fit side by side
+    // on a 360dp phone, and an unconstrained Row overflows to the right by
+    // about 35px rather than giving way.
+    //
+    // The heading is the half that can afford to lose characters: it names a
+    // section the rows beneath it already demonstrate, whereas "See all" is a
+    // control, and a control clipped in half is one a teacher cannot read or
+    // trust. So the label takes the remaining width and ellipsizes into it.
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [label, trailing!],
+        children: [
+          Expanded(
+            child: Text(
+              text.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.label.copyWith(letterSpacing: 1.2),
+            ),
+          ),
+          SizedBox(width: 8.w),
+          trailing!,
+        ],
       ),
     );
   }

@@ -1,0 +1,447 @@
+{
+  "CG7spdTtfvTifgdp6bCR": {
+    "totalDurationInHours": 0,
+    "backgroundInfo": {
+      "title": "",
+      "description": "",
+      "images": []
+    },
+    "allowExitAndReEntry": true,
+    "totalDurationInMinutes": 10,
+    "numberOfAllowedSubmissions": 1,
+    "totalDurationInSeconds": 0,
+    "questionsData": [
+      {
+        "questionTitle": "WHO'S DIVYA?",
+        "questionType": "FILL_IN_THE_BLANKS",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "blanks": {
+          "optionsBlank1": [
+            {
+              "name": "A GIRL",
+              "isCorrect": true,
+              "optionType": "TEXT",
+              "imagePath": ""
+            }
+          ]
+        }
+      },
+      {
+        "questionTitle": "WHO IS MY FAV ENGLISH SINGER?",
+        "questionType": "FILL_IN_THE_BLANKS",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "blanks": {
+          "optionsBlank1": [
+            {
+              "name": "SHAWN MENDES",
+              "isCorrect": true,
+              "optionType": "TEXT",
+              "imagePath": ""
+            }
+          ]
+        }
+      }
+    ],
+    "ownerId": "7vbKdBSqG3YRI6X1GzFNeQD24Rm1",
+    "author": "DVYA",
+    "creator": "Divya Jain",
+    "authenticationType": "login",
+    "status": "LIVE",
+    "docId": "CG7spdTtfvTifgdp6bCR",
+    "displayCorrectAnswers": true,
+    "displayName": "MY QUIZ",
+    "type": "QUIZ",
+    "createdAt": null,
+    "updatedAt": null
+  },
+  "DHJ97HziClo5jeIVdPqI": {
+    "docId": "DHJ97HziClo5jeIVdPqI",
+    "totalDurationInSeconds": 0,
+    "displayName": "MEOW",
+    "ownerId": "7vbKdBSqG3YRI6X1GzFNeQD24Rm1",
+    "creator": "Divya Jain",
+    "allowExitAndReEntry": true,
+    "questionsData": [
+      {
+        "questionTitle": "DESCRIBE \"GAME OF THRONES\"",
+        "questionType": "TEXT",
+        "marks": 5,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 15,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "answer": "Game of Thrones is an epic fantasy story filled with kingdoms, battles, dragons, and powerful families.\nIt follows the struggle for control of the Iron Throne and the fate of the Seven Kingdoms.\nThe series is known for its unexpected twists, memorable characters, and intense conflicts.\n",
+        "maxCharLength": 400
+      }
+    ],
+    "type": "QUIZ",
+    "totalDurationInMinutes": 10,
+    "displayCorrectAnswers": true,
+    "numberOfAllowedSubmissions": 1,
+    "backgroundInfo": {
+      "title": "",
+      "description": "",
+      "images": []
+    },
+    "totalDurationInHours": 0,
+    "status": "LIVE",
+    "authenticationType": "login",
+    "author": "DVYA",
+    "createdAt": null,
+    "updatedAt": null
+  },
+  "OilcCZPh4gF9fJ5PCApl": {
+    "totalDurationInMinutes": 10,
+    "displayCorrectAnswers": true,
+    "creator": "Divya Jain",
+    "author": "dvya",
+    "authenticationType": "login",
+    "status": "LIVE",
+    "backgroundInfo": {
+      "title": "",
+      "description": "",
+      "images": []
+    },
+    "numberOfAllowedSubmissions": 1,
+    "totalDurationInHours": 0,
+    "ownerId": "7vbKdBSqG3YRI6X1GzFNeQD24Rm1",
+    "allowExitAndReEntry": true,
+    "displayName": "test4",
+    "totalDurationInSeconds": 0,
+    "type": "QUIZ",
+    "docId": "OilcCZPh4gF9fJ5PCApl",
+    "createdAt": null,
+    "questionsData": [
+      {
+        "questionTitle": "who's me?",
+        "questionType": "MCQ",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "oneCorrectOption": true,
+        "options": [
+          {
+            "name": "girl",
+            "isCorrect": true,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "boy ",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "cat",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          }
+        ]
+      },
+      {
+        "questionTitle": "whhere is spain?",
+        "questionType": "FILL_IN_THE_BLANKS",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "blanks": {
+          "optionsBlank1": [
+            {
+              "name": "earth",
+              "isCorrect": true,
+              "optionType": "TEXT",
+              "imagePath": ""
+            }
+          ]
+        }
+      },
+      {
+        "questionTitle": "who's shawn?",
+        "questionType": "TEXT",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "answer": "singer",
+        "maxCharLength": 400
+      },
+      {
+        "questionTitle": "where is chicago?",
+        "questionType": "RICH_BLANKS",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 5,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "blanks": {
+          "blank a": [
+            {
+              "name": "america",
+              "isCorrect": true,
+              "optionType": "TEXT",
+              "imagePath": ""
+            }
+          ]
+        }
+      },
+      {
+        "questionTitle": "Explain Game of thrones",
+        "questionType": "DESCRIPTIVE",
+        "marks": 10,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 20,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "answer": "Creature of mythological movie",
+        "maxCharLength": 2000
+      }
+    ],
+    "updatedAt": null
+  },
+  "QgBPyT8Pq0wFEbhaSiMQ": {
+    "status": "LIVE",
+    "creator": "Divya Jain",
+    "type": "QUIZ",
+    "displayName": "LA LA",
+    "totalDurationInSeconds": 0,
+    "ownerId": "7vbKdBSqG3YRI6X1GzFNeQD24Rm1",
+    "author": "dvya",
+    "numberOfAllowedSubmissions": 1,
+    "totalDurationInMinutes": 15,
+    "allowExitAndReEntry": true,
+    "authenticationType": "login",
+    "backgroundInfo": {
+      "title": "",
+      "description": "",
+      "images": []
+    },
+    "totalDurationInHours": 0,
+    "displayCorrectAnswers": true,
+    "docId": "QgBPyT8Pq0wFEbhaSiMQ",
+    "createdAt": null,
+    "questionsData": [
+      {
+        "questionTitle": "WHO'S JUSTIN BEIBER?",
+        "questionType": "MCQ",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 15,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "oneCorrectOption": false,
+        "options": [
+          {
+            "name": "SINGER",
+            "isCorrect": true,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "MURDERER",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "FOOTBALL PLAYER",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "SONG WRITER",
+            "isCorrect": true,
+            "optionType": "TEXT",
+            "imagePath": ""
+          }
+        ]
+      },
+      {
+        "questionTitle": "WHICH OF THE ABOVE IS SPANISH SONG?",
+        "questionType": "MCQ",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "oneCorrectOption": false,
+        "options": [
+          {
+            "name": "GUSTAS TU",
+            "isCorrect": true,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "MAI NU",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "YE LILI",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "DESPACITO",
+            "isCorrect": true,
+            "optionType": "TEXT",
+            "imagePath": ""
+          }
+        ]
+      },
+      {
+        "questionTitle": "WHICH COUNTRY WON FIFA 2026?",
+        "questionType": "MCQ",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "oneCorrectOption": true,
+        "options": [
+          {
+            "name": "FRANCE",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "ARGENTINA",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "GEMANY",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "SPAIN",
+            "isCorrect": true,
+            "optionType": "TEXT",
+            "imagePath": ""
+          }
+        ]
+      },
+      {
+        "questionTitle": "WHOSE SONG IS THIS \"SENORITA\"?",
+        "questionType": "MCQ",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "oneCorrectOption": true,
+        "options": [
+          {
+            "name": "JUSTIN BEIBER",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "DADDY YANKEE",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "SHAWN MENDES",
+            "isCorrect": true,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "FONSI",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          }
+        ]
+      },
+      {
+        "questionTitle": "WHO'S ROBERT PATINSON?",
+        "questionType": "MCQ",
+        "marks": 1,
+        "pedagogyType": "FA",
+        "durationInHours": 0,
+        "durationInMinutes": 10,
+        "durationInSeconds": 0,
+        "hasSubParts": false,
+        "subParts": [],
+        "oneCorrectOption": true,
+        "options": [
+          {
+            "name": " FILM PRODUCER",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "SINGER,WRITER",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "GREAT ACTOR",
+            "isCorrect": true,
+            "optionType": "TEXT",
+            "imagePath": ""
+          },
+          {
+            "name": "MODEL",
+            "isCorrect": false,
+            "optionType": "TEXT",
+            "imagePath": ""
+          }
+        ]
+      }
+    ],
+    "updatedAt": null
+  }
+}

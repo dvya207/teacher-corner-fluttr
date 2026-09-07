@@ -18,8 +18,17 @@ import '../theme/app_colors.dart';
 ///   * `TcAppBar(title:)` — root-tab AppBar, no back arrow.
 ///   * `TcAppBar(title:, showBack: true)` — pushed-screen AppBar.
 ///   * `TcAppBar(title: null)` — compact; logo + trailing only.
+///   * `TcAppBar(title:, subtitle:)` — two lines, and TALLER. The bar grows to
+///     76 rather than squeezing two lines into 56, and the title stops being
+///     centred: a centred title above a centred subtitle reads as one
+///     off-balance block once the title ellipsizes, which it does at this
+///     width. Used by the learning unit screen for its progress readout.
 class TcAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
+
+  /// A second, smaller line under [title]. Ignored when [titleWidget] is given,
+  /// which owns its own layout.
+  final String? subtitle;
   final Widget? titleWidget;
   final bool showBack;
   final Widget? trailing;
@@ -30,6 +39,7 @@ class TcAppBar extends StatelessWidget implements PreferredSizeWidget {
   const TcAppBar({
     super.key,
     this.title,
+    this.subtitle,
     this.titleWidget,
     this.showBack = false,
     this.trailing,
@@ -38,8 +48,15 @@ class TcAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.centerTitle = true,
   });
 
+  /// Whether the two-line variant is in play, which decides the height.
+  bool get _hasSubtitle =>
+      titleWidget == null &&
+      title != null &&
+      subtitle != null &&
+      subtitle!.trim().isNotEmpty;
+
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => Size.fromHeight(_hasSubtitle ? 76 : 56);
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +78,7 @@ class TcAppBar extends StatelessWidget implements PreferredSizeWidget {
         // App bar height is platform chrome (matches AppDimensions.appBarHeight
         // / kToolbarHeight and preferredSize); NOT scaled.
         child: SizedBox(
-          height: 56,
+          height: _hasSubtitle ? 76 : 56,
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 12.w),
             child: Row(
@@ -87,25 +104,49 @@ class TcAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ] else if (title != null) ...[
                   SizedBox(width: 8.w),
                   Expanded(
-                    child: Text(
-                      title!,
-                      textAlign:
-                          centerTitle ? TextAlign.center : TextAlign.start,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: fg,
-                        letterSpacing: 0.1,
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: _hasSubtitle
+                          ? CrossAxisAlignment.start
+                          : CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          title!,
+                          textAlign: _hasSubtitle
+                              ? TextAlign.start
+                              : (centerTitle
+                                    ? TextAlign.center
+                                    : TextAlign.start),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: _hasSubtitle ? 18.sp : 16.sp,
+                            fontWeight: FontWeight.w600,
+                            color: fg,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                        if (_hasSubtitle) ...[
+                          SizedBox(height: 2.h),
+                          Text(
+                            subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w400,
+                              color: fg.withValues(alpha: 0.75),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ] else
                   const Spacer(),
                 if (trailingChildren.isNotEmpty)
                   ...trailingChildren
-                else if (centerTitle && title != null)
+                else if (centerTitle && title != null && !_hasSubtitle)
                   // symmetric spacer so centered title is actually centered
                   SizedBox(width: 22.r + 8.w),
               ],

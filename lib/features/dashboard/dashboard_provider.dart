@@ -6,6 +6,7 @@ import '../../core/models/classroom_ref.dart';
 import '../../core/models/teacher_account.dart';
 import '../../core/services/firestore_service.dart';
 import '../classrooms/classroom_list_item.dart';
+import '../classrooms/school_list_item.dart';
 
 /// The three states the dashboard can be in. Explicitly three, because
 /// "loaded with nothing" and "still loading" and "failed" have to look
@@ -88,9 +89,15 @@ class DashboardProvider extends ChangeNotifier {
   /// DEGRADES PER ROW, not wholesale. [ClassroomListItem.merge] falls back to
   /// the teacher record's copy for any classroom whose document did not load, so
   /// one failed read costs that row's accuracy rather than the whole number.
-  int get programmeCount => {
-    for (final classroom in _classrooms) ...classroom.programmeIds,
-  }.length;
+  int get programmeCount =>
+      {for (final classroom in _classrooms) ...classroom.programmeIds}.length;
+
+  /// Every school the teacher's classrooms name, for the "My Schools" section.
+  ///
+  /// Recomputed per call rather than cached: it is a fold over a list that is
+  /// already in memory and only changes when [_classrooms] is replaced
+  /// wholesale, so a cache would be one more thing able to go stale.
+  List<SchoolListItem> get schools => SchoolListItem.groupFrom(_classrooms);
 
   /// Localisation key, not a sentence. Same reasoning as AuthProvider.
   String? get errorKey => _errorKey;

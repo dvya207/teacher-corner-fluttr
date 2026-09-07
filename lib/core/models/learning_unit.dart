@@ -1,4 +1,5 @@
 import '../utils/safe_parse.dart';
+import 'learning_unit_additional_resource.dart';
 import 'learning_unit_taxonomy.dart';
 
 /// `LearningUnits/{luId}`: the activity itself, shared across classrooms.
@@ -23,6 +24,7 @@ class LearningUnit {
     this.previewImagePath,
     this.maturity,
     this.resources = const {},
+    this.additionalResources = const [],
   });
 
   final String learningUnitId;
@@ -61,8 +63,37 @@ class LearningUnit {
   /// Field name on the document is capitalised: `Maturity`.
   final String? maturity;
 
-  /// Maturity level to `LearningUnitResources` document id.
+  /// The unit document's own `resources` map, and it holds TWO UNRELATED
+  /// KINDS OF VALUE under one roof. Knowing that is the whole point of the
+  /// accessors below.
+  ///
+  ///   resources.gold           = "1eXvhUXV7st…"    a DOCUMENT ID, store one
+  ///   resources.materialPath   = "learningUnits/…/Sample.pdf"   a FILE
+  ///   resources.videoUrl       = "https://youtube.com/…"        a LINK
+  ///
+  /// The maturity keys point at `learningUnitResources` documents, one per
+  /// rung, which is where most of a unit's uploads live. The rest are the web
+  /// app's nine "External Resources", which have NO maturity and live right
+  /// here on the unit: the editor's External Resources tab has no maturity
+  /// selector for exactly this reason.
+  ///
+  /// THIS SECOND STORE IS WHY SIX TABS RENDERED EMPTY. A workflow step reaches
+  /// these nine with `contentCategory: 'externalResources'`, and this app only
+  /// ever looked in the maturity documents, so Material List, Observation
+  /// Sheet, Evidence Uploads and the rest all resolved to nothing while the
+  /// files sat here. See [externalResourcePath].
   final Map<String, String> resources;
+
+  /// Extra files the author attached beyond the standard slots, in document
+  /// order. See [LearningUnitAdditionalResource].
+  final List<LearningUnitAdditionalResource> additionalResources;
+
+  /// The ones a teacher should actually see. A draft is not hidden by accident:
+  /// `publish: false` is set deliberately by whoever attached it.
+  List<LearningUnitAdditionalResource> get publishedAdditionalResources => [
+    for (final r in additionalResources)
+      if (r.publish) r,
+  ];
 
   /// `learningUnits`, LOWERCASE: the web app's collection name in
   /// `teacher-corner-dev`, not production's `LearningUnits`.
@@ -106,10 +137,58 @@ class LearningUnit {
   }
 
   /// The resource document for this unit's own maturity, when there is one.
+  ///
+  /// CASE-INSENSITIVE, and it has to be: the two halves of this lookup
+  /// disagree in live data. The unit's own field is capitalised,
+  /// `Maturity: "Gold"`, while the key inside its `resources` map is
+  /// lowercase, `resources.gold`. An exact lookup therefore missed on every
+  /// real unit and this getter answered null for all six of them.
   String? get resourceIdForMaturity {
-    final key = maturity?.trim();
+    final key = maturity?.trim().toLowerCase();
     if (key == null || key.isEmpty) return null;
-    return resources[key];
+    for (final entry in resources.entries) {
+      if (entry.key.toLowerCase() == key) {
+        final value = entry.value.trim();
+        return value.isEmpty ? null : value;
+      }
+    }
+    return null;
+  }
+
+  /// The maturity rungs, which are the keys of [resources] whose values are
+  /// document ids rather than files.
+  ///
+  /// Lowercase, because the ladder is written lowercase in the map even though
+  /// the unit's own `Maturity` field is capitalised ('Gold').
+  static const Set<String> maturityKeys = {
+    'bronze',
+    'silver',
+    'gold',
+    'platinum',
+    'diamond',
+  };
+
+  /// The category a workflow step uses to point at an External Resource.
+  ///
+  /// Not one of production's resource categories. The web app added it so a
+  /// step could name a file a teacher had uploaded on the External Resources
+  /// tab, which was otherwise unreachable from any step.
+  static const String externalResourcesCategory = 'externalresources';
+
+  /// The External Resource in one slot, or null when that slot is empty.
+  ///
+  /// NAMED SLOTS ARE NOT WHITELISTED, the maturity rungs are blacklisted
+  /// instead. The nine slots are a list the web app maintains and production's
+  /// sheet can add to; a whitelist here would silently hide the tenth. What
+  /// must never come back from this is a maturity value, because that is a
+  /// document id and handing it to a viewer asks Storage for a file that is
+  /// not there.
+  String? externalResourcePath(String? slot) {
+    final key = slot?.trim();
+    if (key == null || key.isEmpty) return null;
+    if (maturityKeys.contains(key.toLowerCase())) return null;
+    final value = resources[key]?.trim();
+    return (value == null || value.isEmpty) ? null : value;
   }
 
   factory LearningUnit.fromMap(
@@ -161,14 +240,49 @@ class LearningUnit {
       domainName: SafeParse.asDisplayString(data['domainName']),
       subDomainCode: SafeParse.asDisplayString(data['subDomainCode']),
       subDomainName: SafeParse.asDisplayString(data['subDomainName']),
+      // `learningUnitImage` FIRST, because that is the one the web app fills.
+      //
+      // Both fields exist on a live document and only one is ever populated:
+      // `learningUnitImage` holds
+      // "learningUnits/{docId}/learningUnitImage.jpg" while
+      // `learningUnitPreviewImage` sits empty. Reading only the preview field
+      // meant every activity card rendered with no picture, and the card had no
+      // way to tell "this activity has no image" from "we looked in the wrong
+      // place". The preview field is kept as a fallback rather than dropped,
+      // since nothing here proves it is never used.
       previewImagePath: SafeParse.asRefString(
-        data['learningUnitPreviewImage'],
+        _firstNonEmpty(data, const [
+          'learningUnitImage',
+          'learningUnitPreviewImage',
+        ]),
         collection: collection,
         docId: learningUnitId,
         field: 'learningUnitPreviewImage',
       ),
       maturity: SafeParse.asDisplayString(data['Maturity']),
       resources: Map.unmodifiable(resources),
+      additionalResources: LearningUnitAdditionalResource.listFrom(
+        data[LearningUnitAdditionalResource.field],
+        docId: learningUnitId,
+      ),
     );
   }
+}
+
+/// The first of [keys] whose value is a non-empty string, or null.
+///
+/// A helper rather than a chain of `??`, because "present but empty string" is
+/// the case that matters here and `??` only catches null.
+///
+/// NULL WHEN EVERY CANDIDATE IS EMPTY, which is not fussiness. An empty path
+/// is not falsy to a widget: the card guards on `previewImagePath != null`, so
+/// returning "" made it ask Firebase Storage for the empty path and draw a
+/// broken-image box on every activity. Absent has to arrive as absent.
+Object? _firstNonEmpty(Map<String, dynamic> data, List<String> keys) {
+  for (final key in keys) {
+    final value = data[key];
+    if (value is String && value.trim().isEmpty) continue;
+    if (value != null) return value;
+  }
+  return null;
 }

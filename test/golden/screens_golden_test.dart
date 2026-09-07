@@ -16,12 +16,14 @@ import 'package:tc_starter/features/classrooms/classroom_detail_screen.dart';
 import 'package:tc_starter/features/dashboard/dashboard_screen.dart';
 import 'package:tc_starter/features/evidence/evidence_panel.dart';
 import 'package:tc_starter/features/evidence/evidence_provider.dart';
+import 'package:tc_starter/features/learning_unit/learning_unit_overview_screen.dart';
 import 'package:tc_starter/features/learning_unit/learning_unit_provider.dart';
 import 'package:tc_starter/features/learning_unit/learning_unit_screen.dart';
 import 'package:tc_starter/features/shell/not_built_screen.dart';
 import 'package:tc_starter/features/startup/startup_failure_screen.dart';
 import 'package:tc_starter/core/models/learning_unit.dart';
 import 'package:tc_starter/core/models/workflow.dart';
+import 'package:tc_starter/core/models/workflow_progress.dart';
 import 'package:tc_starter/core/services/evidence_storage.dart';
 import 'package:tc_starter/core/services/photo_picker.dart';
 import 'dart:io';
@@ -186,6 +188,16 @@ TeacherAccount anAccount({bool linked = true, bool withProfile = true}) =>
       teaching: linked ? aTeacher() : null,
     );
 
+/// The moment every dashboard golden is photographed at.
+///
+/// FIXED, because the greeting depends on the hour and these files do not.
+/// Generated against the real clock, 06, 08 and 21 passed only while the
+/// machine regenerating them stayed in the same part of the day, and turned
+/// into a failure every evening that blamed the greeting for whatever change
+/// was under review. Ten in the morning, so the images say "Good morning" and
+/// keep saying it.
+final _goldenClock = DateTime(2026, 1, 1, 10, 0);
+
 void main() {
   setUpAll(loadAppFonts);
   setUp(initLocalizationForTest);
@@ -269,7 +281,7 @@ void main() {
                   DashboardProvider(firestore: firestore, timeout: timeout),
             ),
           ],
-          child: const DashboardScreen(),
+          child: DashboardScreen(now: _goldenClock),
         );
 
     testWidgets('loading', (tester) async {
@@ -403,6 +415,10 @@ void main() {
       await pumpScreen(
         tester,
         providers: [
+          // The classroom screen reads the uid to fetch progress per activity.
+          ChangeNotifierProvider<AuthProvider>(
+            create: (_) => StubAuthProvider(),
+          ),
           ChangeNotifierProvider<ClassroomDetailProvider>(
             create: (_) => ClassroomDetailProvider(
               firestore: FakeFirestoreService(
@@ -445,6 +461,39 @@ void main() {
       await pumpLu(tester);
       await shoot(tester, '17_learning_unit');
     });
+
+    testWidgets('the overview a teacher lands on', (tester) async {
+      await pumpScreen(
+        tester,
+        providers: [
+          ChangeNotifierProvider<AuthProvider>(
+            create: (_) => StubAuthProvider(),
+          ),
+          ChangeNotifierProvider<LearningUnitProvider>(
+            create: (_) => LearningUnitProvider(
+              firestore: FakeFirestoreService(
+                learningUnits: [theUnit()],
+                workflows: [theWorkflow()],
+                progress: {
+                  // Part-done, so the image shows both states of a step row.
+                  'lu_magnetic_pen_stand': const WorkflowProgress(
+                    completedStepIds: {'s1'},
+                  ),
+                },
+              ),
+            ),
+          ),
+        ],
+        child: const LearningUnitOverviewScreen(
+          learningUnitId: 'lu_magnetic_pen_stand',
+          workflowId: 'wf_mps_v1',
+          classroomId: 'cls_oak_7a',
+          programmeId: 'prog_tip_2026',
+          breadcrumb: 'Test School Oak · 7 A',
+        ),
+      );
+      await shoot(tester, '23_learning_unit_overview');
+    });
   });
 
   group('evidence', () {
@@ -486,8 +535,8 @@ void main() {
           displayName: 'Photo evidence',
           photoUrls: ['https://example/a', 'https://example/b'],
           storagePaths: [
-            'activityEvidence/cls_oak_7a/lu_magnetic_pen_stand/u_1_0.jpg',
-            'activityEvidence/cls_oak_7a/lu_magnetic_pen_stand/u_1_1.jpg',
+            'teacher_submissions/u/cls_oak_7a_lu_magnetic_pen_stand_1_0.jpg',
+            'teacher_submissions/u/cls_oak_7a_lu_magnetic_pen_stand_1_1.jpg',
           ],
         ),
       );
@@ -525,7 +574,7 @@ void main() {
             ),
           ),
         ],
-        routes: {'/dashboard': (context) => const DashboardScreen()},
+        routes: {'/dashboard': (context) => DashboardScreen(now: _goldenClock)},
       );
       await shoot(tester, '21_shell_dashboard');
     });

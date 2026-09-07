@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/teacher.dart';
 import 'package:tc_starter/core/widgets/tc_hero_stat_tile.dart';
-import 'package:tc_starter/features/classrooms/widgets/classroom_card.dart';
+import 'package:tc_starter/features/dashboard/widgets/dashboard_classroom_row.dart';
+import 'package:tc_starter/features/dashboard/widgets/school_card.dart';
 import 'package:tc_starter/features/auth/auth_provider.dart';
 import 'package:tc_starter/features/dashboard/dashboard_provider.dart';
 import 'package:tc_starter/features/dashboard/dashboard_screen.dart';
@@ -128,8 +129,11 @@ void main() {
       // ET club's card, whose subtitle is the institution alone because that
       // classroom has no grade or section.
       expect(find.text('Test School Oak'), findsWidgets);
-      expect(find.byType(TcHeroStatTile), findsNWidgets(2));
-      expect(find.text('Classrooms'), findsWidgets);
+      // THREE tiles, always. The row is a fixed shape rather than one that
+      // grows a slot when a number happens to be knowable.
+      expect(find.byType(TcHeroStatTile), findsNWidgets(3));
+      expect(find.text('Classes'), findsOneWidget);
+      expect(find.text('Students'), findsOneWidget);
       expect(find.text('Programmes'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
@@ -160,11 +164,93 @@ void main() {
         firestore: FakeFirestoreService(teacher: seededTeacher()),
       );
 
-      // Two classrooms, both running the same single programme.
+      // Two classrooms, both running the same single programme. No
+      // authoritative documents were readable, so the student total is not
+      // knowable and says so rather than claiming zero.
       final tiles = tester
           .widgetList<TcHeroStatTile>(find.byType(TcHeroStatTile))
           .toList();
-      expect(tiles.map((t) => t.value), ['2', '1']);
+      expect(tiles.map((t) => t.value), ['2', '–', '1']);
+    });
+  });
+
+  group('the hero totals across every school', () {
+    testWidgets('counts all the classrooms, not just the named school\'s', (
+      tester,
+    ) async {
+      // The teacher's own institution is one of four. The hero answers "how
+      // much am I carrying", which is a question about the teacher rather than
+      // about a building, so all four count. The per-school split is the
+      // schools section below.
+      await pumpDashboard(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: Teacher.fromMap('uid_1', {
+            'teacherMeta': {
+              'firstName': 'Divya',
+              'institutionName': 'Beacon Hill',
+            },
+            'classrooms': {
+              'a': {
+                'classroomName': '8 D',
+                'institutionName': 'Beacon Hill',
+                'programmes': {
+                  'prg_one': {'displayName': 'One'},
+                },
+              },
+              'b': {
+                'classroomName': '4 D',
+                'institutionName': 'Jnana Syhadri',
+                'programmes': {
+                  'prg_two': {'displayName': 'Two'},
+                },
+              },
+              'c': {
+                'classroomName': '1 A',
+                'institutionName': 'Dayananda Sagar',
+                'programmes': {
+                  'prg_two': {'displayName': 'Two'},
+                  'prg_three': {'displayName': 'Three'},
+                },
+              },
+            },
+          }),
+        ),
+      );
+
+      final tiles = tester
+          .widgetList<TcHeroStatTile>(find.byType(TcHeroStatTile))
+          .toList();
+      // Three classrooms across three schools, and three DISTINCT programmes:
+      // "Two" runs at two of them and is one programme, not two.
+      expect(tiles.first.value, '3');
+      expect(tiles.last.value, '3');
+    });
+
+    testWidgets('every school gets a row, counting only its own', (
+      tester,
+    ) async {
+      await pumpDashboard(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: Teacher.fromMap('uid_1', {
+            'teacherMeta': {'firstName': 'Divya'},
+            'classrooms': {
+              'a': {'classroomName': '1 A', 'institutionName': 'Dayananda'},
+              'b': {'classroomName': '2 B', 'institutionName': 'Dayananda'},
+              'c': {'classroomName': '4 D', 'institutionName': 'Jnana'},
+            },
+          }),
+        ),
+      );
+
+      // Asserted on the cards themselves, not on find.text: a school's name
+      // also appears in the hero subtitle and in every classroom row that
+      // names it, so a bare text search counts four "Dayananda"s and proves
+      // nothing about this section.
+      final cards = tester.widgetList<SchoolCard>(find.byType(SchoolCard));
+      expect(cards.map((c) => c.school.name), ['Dayananda', 'Jnana']);
+      expect(cards.map((c) => c.school.classroomCount), [2, 1]);
     });
   });
 
@@ -247,7 +333,7 @@ void main() {
       );
       await pumpDashboard(tester, firestore: fake);
 
-      expect(find.byType(ClassroomCard), findsNWidgets(2));
+      expect(find.byType(DashboardClassroomRow), findsNWidgets(2));
       expect(find.text('7 A'), findsOneWidget);
       expect(find.text('Oak ET Club'), findsOneWidget);
       expect(fake.teacherReads, 1);
@@ -268,7 +354,9 @@ void main() {
       expect(find.text('44'), findsOneWidget);
     });
 
-    testWidgets('shows each row its own student count', (tester) async {
+    testWidgets('gives each row its school and programmes on one line', (
+      tester,
+    ) async {
       await pumpDashboard(
         tester,
         firestore: FakeFirestoreService(
@@ -277,8 +365,13 @@ void main() {
         ),
       );
 
-      expect(find.text('32 students'), findsOneWidget);
-      expect(find.text('12 students'), findsOneWidget);
+      // ONE LINE, school then programmes, unlike the classrooms screen where
+      // each gets a line of its own. Three of these rows sit above a schools
+      // section here, so the row trades detail for height.
+      expect(find.text('Test School Oak · TIP 2026'), findsNWidgets(2));
+      // Per-row student counts are not on the dashboard at all: the hero
+      // already totals them, and repeating the parts under the sum is noise.
+      expect(find.textContaining('students'), findsNothing);
     });
 
     testWidgets('a failed classroom read costs the total, not the screen',
@@ -294,11 +387,16 @@ void main() {
       );
 
       expect(find.textContaining('Divya'), findsWidgets);
-      expect(find.text('Classrooms'), findsWidgets);
-      expect(find.byType(ClassroomCard), findsNWidgets(2));
+      expect(find.text('Classes'), findsOneWidget);
+      expect(find.byType(DashboardClassroomRow), findsNWidgets(2));
       // No partial total: one missing document would make any sum understate
-      // the real figure while looking exact.
-      expect(find.text('Students'), findsNothing);
+      // the real figure while looking exact. The tile STAYS, because its slot
+      // is part of a fixed three-tile row, and reports that it does not know.
+      expect(find.text('Students'), findsOneWidget);
+      final students = tester
+          .widgetList<TcHeroStatTile>(find.byType(TcHeroStatTile))
+          .elementAt(1);
+      expect(students.value, '–');
       expect(find.textContaining('students'), findsNothing);
     });
 
@@ -313,9 +411,14 @@ void main() {
         ),
       );
 
-      expect(find.text('Students'), findsNothing);
-      // The one that is known still shows on its own row.
-      expect(find.text('32 students'), findsOneWidget);
+      // The tile is still there and still refuses to guess.
+      expect(find.text('Students'), findsOneWidget);
+      final students = tester
+          .widgetList<TcHeroStatTile>(find.byType(TcHeroStatTile))
+          .elementAt(1);
+      expect(students.value, '–');
+      // And no row quietly reports the half of the data that did load.
+      expect(find.textContaining('students'), findsNothing);
     });
 
     testWidgets('no classrooms means zero students, which is a fact',
@@ -345,7 +448,7 @@ void main() {
 
       expect(find.textContaining('students'), findsNothing);
       expect(find.textContaining('null'), findsNothing);
-      expect(find.byType(ClassroomCard), findsNWidgets(2));
+      expect(find.byType(DashboardClassroomRow), findsNWidgets(2));
     });
 
     testWidgets('no longer renders a heading with nothing under it',
@@ -357,7 +460,7 @@ void main() {
         firestore: FakeFirestoreService(teacher: seededTeacher()),
       );
 
-      expect(find.byType(ClassroomCard), findsWidgets);
+      expect(find.byType(DashboardClassroomRow), findsWidgets);
     });
 
     testWidgets('a teacher with no classrooms gets an empty state',
@@ -372,7 +475,12 @@ void main() {
       );
 
       expect(find.text('No classrooms yet'), findsOneWidget);
-      expect(find.byType(ClassroomCard), findsNothing);
+      expect(find.byType(DashboardClassroomRow), findsNothing);
+      // And no schools heading above empty space: with no classrooms there are
+      // no schools to derive, and a second panel repeating the empty state
+      // would only make the screen look broken.
+      expect(find.text('MY SCHOOLS'), findsNothing);
+      expect(find.byType(SchoolCard), findsNothing);
     });
 
     testWidgets('caps the rows and offers See all when there are more',
@@ -391,19 +499,43 @@ void main() {
 
       // A dashboard is a place to start from; past a few rows the searchable
       // tab is the better tool.
-      expect(find.byType(ClassroomCard), findsNWidgets(3));
+      expect(find.byType(DashboardClassroomRow), findsNWidgets(3));
+      // One "See all", not two: these classrooms name no school, so there is
+      // no schools section under them to carry a second.
       expect(find.text('See all'), findsOneWidget);
     });
 
-    testWidgets('offers no See all when everything already fits',
+    testWidgets('offers See all on both sections, even when everything fits',
         (tester) async {
+      // THE RULE CHANGED. "See all" used to appear only once a fourth
+      // classroom existed, which made the section header change shape
+      // according to data the teacher cannot see the size of, and left the
+      // schools section below carrying an affordance its twin above lacked.
       await pumpDashboard(
         tester,
         firestore: FakeFirestoreService(teacher: seededTeacher()),
       );
 
-      expect(find.byType(ClassroomCard), findsNWidgets(2));
-      expect(find.text('See all'), findsNothing);
+      expect(find.byType(DashboardClassroomRow), findsNWidgets(2));
+      expect(find.byType(SchoolCard), findsOneWidget);
+      expect(find.text('See all'), findsNWidgets(2));
+    });
+
+    testWidgets('groups the classrooms into the schools that name them',
+        (tester) async {
+      await pumpDashboard(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          classrooms: authoritativeClassrooms(),
+        ),
+      );
+
+      // Both classrooms are at one school, so one row, and it counts the
+      // programme ONCE though two classrooms run it: a school running the same
+      // programme in two classes runs one programme.
+      expect(find.byType(SchoolCard), findsOneWidget);
+      expect(find.text('2 classrooms · 1 programme'), findsOneWidget);
     });
 
     testWidgets('the section survives landscape and the font ceiling',

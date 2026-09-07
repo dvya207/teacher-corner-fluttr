@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/models/classroom.dart';
 import '../../core/models/learning_unit.dart';
+import '../../core/models/workflow_progress.dart';
 import '../../core/services/firestore_service.dart';
 
 enum ClassroomDetailStatus { loading, loaded, notFound, error }
@@ -32,6 +33,7 @@ class Activity {
     required this.learningUnitId,
     required this.workflowId,
     this.unit,
+    this.progress = const WorkflowProgress(),
   });
 
   final String learningUnitId;
@@ -40,7 +42,18 @@ class Activity {
   /// Null when the classroom references a unit whose document is missing.
   final LearningUnit? unit;
 
+  /// This teacher's progress through the activity IN THIS CLASSROOM. Defaults
+  /// to nothing done, which is also what an unreadable progress collection
+  /// leaves every card showing.
+  final WorkflowProgress progress;
+
   String get label => unit?.label ?? learningUnitId;
+
+  /// Derived from the unit's own `stepCount` rather than from the workflow,
+  /// which this screen deliberately does not read. See
+  /// [WorkflowProgress.statusForCount].
+  ActivityProgressStatus get status =>
+      progress.statusForCount(unit?.stepCount);
 }
 
 class ClassroomDetailProvider extends ChangeNotifier {
@@ -58,6 +71,10 @@ class ClassroomDetailProvider extends ChangeNotifier {
   List<ProgrammeActivities> _programmes = const [];
   String? _errorKey;
   String? _classroomId;
+
+  /// Needed only for the progress read, which is why it is nullable: signed out
+  /// there is no progress to show, and the screen still renders the classroom.
+  String? _uid;
   bool _inFlight = false;
   bool _disposed = false;
 
@@ -70,11 +87,12 @@ class ClassroomDetailProvider extends ChangeNotifier {
   bool get hasNoProgrammes =>
       _status == ClassroomDetailStatus.loaded && _programmes.isEmpty;
 
-  Future<void> load(String classroomId) async {
+  Future<void> load(String classroomId, {String? uid}) async {
     if (_classroomId == classroomId && _status != ClassroomDetailStatus.error) {
       return;
     }
     _classroomId = classroomId;
+    _uid = uid;
     await _fetch();
   }
 
@@ -129,6 +147,7 @@ class ClassroomDetailProvider extends ChangeNotifier {
     };
     final units = await _firestore.fetchLearningUnits(unitIds);
     final byId = {for (final unit in units) unit.learningUnitId: unit};
+    final progress = await _loadProgress(classroomId);
 
     return (
       classroom,
@@ -142,11 +161,36 @@ class ClassroomDetailProvider extends ChangeNotifier {
                   learningUnitId: binding.learningUnitId,
                   workflowId: binding.workflowId,
                   unit: byId[binding.learningUnitId],
+                  progress:
+                      progress[binding.learningUnitId] ??
+                      const WorkflowProgress(),
                 ),
             ],
           ),
       ],
     );
+  }
+
+  /// One query for the whole classroom, and allowed to fail on its own.
+  ///
+  /// Progress is an ENHANCEMENT to this screen, not its subject. A teacher who
+  /// cannot read their own progress should still get their programmes and
+  /// activities, with every card reading "Not Started", rather than an error
+  /// page in place of a classroom.
+  Future<Map<String, WorkflowProgress>> _loadProgress(
+    String classroomId,
+  ) async {
+    final uid = _uid;
+    if (uid == null) return const {};
+    try {
+      return await _firestore.fetchClassroomProgress(
+        uid: uid,
+        classroomId: classroomId,
+      );
+    } catch (e) {
+      debugPrint('ClassroomDetailProvider: progress unavailable: $e');
+      return const {};
+    }
   }
 
   void _notify() {

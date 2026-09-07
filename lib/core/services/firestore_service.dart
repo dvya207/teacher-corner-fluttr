@@ -6,12 +6,15 @@ import '../models/quiz_scoring.dart';
 import '../models/assignment_evidence.dart';
 import '../models/classroom.dart';
 import '../models/learning_unit.dart';
+import '../models/board_grade_resource.dart';
+import '../models/learning_unit_resources.dart';
 import '../models/learning_unit_taxonomy.dart';
 import '../models/programme.dart';
 import '../models/teacher.dart';
 import '../models/teacher_account.dart';
 import '../models/teacher_profile.dart';
 import '../models/workflow.dart';
+import '../models/workflow_progress.dart';
 import '../utils/safe_parse.dart';
 
 /// Every Firestore read in the app goes through this class. No screen and no
@@ -534,6 +537,278 @@ class FirestoreService {
     classroomId: classroomId,
     programmeId: programmeId,
   ).set({evidence.assignmentId: evidence.toMap()}, SetOptions(merge: true));
+
+  // -- Form responses ---------------------------------------------------------
+
+  /// `users/{uid}/formResponses/{classroomId}-{assignmentId}`.
+  ///
+  /// The same subtree, and the same reasoning, as the quiz submissions and the
+  /// workflow progress: it is the one place the web app's deployed rules
+  /// already grant to this uid, so it needs no rules change and no deploy from
+  /// this repo. A teacher's feedback on running an activity is their own record
+  /// of their teaching, not a fact about the classroom.
+  ///
+  /// KEYED BY CLASSROOM as well as assignment, because the same feedback form
+  /// is attached to the activity in every classroom that runs it and the
+  /// answers are about one class.
+  DocumentReference<Map<String, dynamic>> _formResponseDoc({
+    required String uid,
+    required String classroomId,
+    required String assignmentId,
+  }) => _db
+      .collection(TeacherProfile.collection)
+      .doc(uid)
+      .collection('formResponses')
+      .doc('$classroomId-$assignmentId');
+
+  Future<Map<String, dynamic>?> fetchFormResponse({
+    required String uid,
+    required String classroomId,
+    required String assignmentId,
+  }) async {
+    final snap = await _formResponseDoc(
+      uid: uid,
+      classroomId: classroomId,
+      assignmentId: assignmentId,
+    ).get();
+    return snap.data();
+  }
+
+  /// Every form response this teacher has recorded in one classroom, keyed by
+  /// assignment id.
+  ///
+  /// ONE QUERY FOR THE CLASSROOM, not one read per assignment. The Submissions
+  /// report walks every activity of a programme and each one may carry two or
+  /// three forms, so fetching them individually is a round trip per tab on a
+  /// screen whose whole job is to list them.
+  ///
+  /// FILTERED ON THE FIELD, not on the document id. The id happens to be
+  /// `{classroomId}-{assignmentId}`, so a prefix scan would work and would
+  /// break the day the id scheme changes; the documents carry `classroomId` as
+  /// a field precisely so it can be queried.
+  Future<Map<String, Map<String, dynamic>>> fetchFormResponsesForClassroom({
+    required String uid,
+    required String classroomId,
+  }) async {
+    final snap = await _db
+        .collection(TeacherProfile.collection)
+        .doc(uid)
+        .collection('formResponses')
+        .where('classroomId', isEqualTo: classroomId)
+        .get();
+
+    final byAssignment = <String, Map<String, dynamic>>{};
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final assignmentId = SafeParse.asDisplayString(data['assignmentId']);
+      if (assignmentId != null && assignmentId.isNotEmpty) {
+        byAssignment[assignmentId] = data;
+      }
+    }
+    return byAssignment;
+  }
+
+  /// The whole submissions document for one classroom and programme.
+  ///
+  /// THE WHOLE THING, unlike [fetchEvidence], which digs one assignment out of
+  /// it. This document is not a list of one kind of record: it holds the photo
+  /// evidence keyed by assignment id AND, at its own top level, the fields a
+  /// quiz attempt is written as (`assignmentId`, `maxScore`, `latestAttempt`,
+  /// `attemptsCount`). A report that has to show both needs it whole, and
+  /// asking twice for the same document to get two halves of it is worse.
+  ///
+  /// Null when nothing has ever been submitted for that pairing, which is the
+  /// normal starting state and not a failure.
+  Future<Map<String, dynamic>?> fetchSubmissionRecord({
+    required String uid,
+    required String classroomId,
+    required String programmeId,
+  }) async {
+    final snap = await _submissionDoc(
+      uid: uid,
+      classroomId: classroomId,
+      programmeId: programmeId,
+    ).get();
+    return snap.exists ? snap.data() : null;
+  }
+
+  /// Saves one teacher's answers.
+  ///
+  /// A WHOLE-DOCUMENT SET, unlike the progress write's merge. A form is
+  /// submitted complete rather than a field at a time, and merging would leave
+  /// answers from a previous submission sitting beside the new ones where a
+  /// question has since been removed.
+  Future<void> writeFormResponse({
+    required String uid,
+    required String classroomId,
+    required String assignmentId,
+    required String programmeId,
+    required Map<String, Object?> answers,
+  }) => _formResponseDoc(
+    uid: uid,
+    classroomId: classroomId,
+    assignmentId: assignmentId,
+  ).set({
+    'teacherId': uid,
+    'classroomId': classroomId,
+    'programmeId': programmeId,
+    'assignmentId': assignmentId,
+    'answers': answers,
+    'submittedAt': FieldValue.serverTimestamp(),
+  });
+
+  // -- Learning unit resources ------------------------------------------------
+
+  /// The uploads behind one learning unit's step contents.
+  ///
+  /// QUERIED BY FIELD, not fetched by id. The document has an id of its own
+  /// (`rfasd9I0Pi1UXKjNHMOi` for Swimming) and points back at its unit through
+  /// `learningUnitDocId`, so there is no path from the unit to the document
+  /// except this query.
+  ///
+  /// Returns empty rather than null when nothing is uploaded, so the caller
+  /// treats "no resources document" and "an empty one" the same way: every
+  /// content pane says it has nothing yet.
+  Future<LearningUnitResources> fetchLearningUnitResources(
+    String learningUnitDocId,
+  ) async {
+    final snap = await _db
+        .collection(LearningUnitResources.collection)
+        .where(LearningUnitResources.unitField, isEqualTo: learningUnitDocId)
+        .limit(1)
+        .get();
+    if (snap.docs.isEmpty) return const LearningUnitResources();
+    final doc = snap.docs.first;
+    return LearningUnitResources.fromMap(doc.id, doc.data());
+  }
+
+  /// This unit's board-and-grade resource documents, keyed by document id.
+  ///
+  /// KEYED BY ID because that is what a grade-dependent slot stores against a
+  /// board: the slot holds `{ CBSE: 's9qKMMiIrTMVaay3Kn14' }` and the paths
+  /// live on that document under `grade_01` and friends.
+  ///
+  /// ONE QUERY FOR THE WHOLE UNIT, not one read per slot. A step can carry
+  /// several grade-dependent contents and a workflow several steps; fetching
+  /// each by id would be a round trip per tab on school wifi.
+  ///
+  /// A FAILURE PROPAGATES, as it does from every other read in this class. The
+  /// caller degrades it: `LearningUnitProvider._loadGradeDependent` catches,
+  /// logs, and leaves the map empty, so a grade-dependent slot falls back to
+  /// its universal copy. Swallowing it here would put the one silent catch in
+  /// a file that otherwise reports everything.
+  ///
+  /// An empty result is the NORMAL case, not an error: most units have no
+  /// board copies at all.
+  Future<Map<String, BoardGradeResource>> fetchBoardGradeResources(
+    String learningUnitDocId,
+  ) async {
+    final snap = await _db
+        .collection(BoardGradeResource.collection)
+        .where(BoardGradeResource.unitField, isEqualTo: learningUnitDocId)
+        .get();
+    return {
+      for (final doc in snap.docs)
+        doc.id: BoardGradeResource.fromMap(doc.id, doc.data()),
+    };
+  }
+
+  // -- Workflow progress ------------------------------------------------------
+
+  /// `users/{uid}/workflowProgress/{classroomId}-{learningUnitId}`.
+  ///
+  /// Under `users`, for exactly the reasons given on [_submissionDoc]: it is
+  /// the one subtree the web app's deployed rules already grant to its own uid,
+  /// so this needs no rules change and no deploy from this repo. See
+  /// [WorkflowProgress] for why a teacher's progress is private data rather
+  /// than a fact about the classroom.
+  DocumentReference<Map<String, dynamic>> _progressDoc({
+    required String uid,
+    required String classroomId,
+    required String learningUnitId,
+  }) => _db
+      .collection(TeacherProfile.collection)
+      .doc(uid)
+      .collection(WorkflowProgress.collection)
+      .doc(
+        WorkflowProgress.documentId(
+          classroomId: classroomId,
+          learningUnitId: learningUnitId,
+        ),
+      );
+
+  /// One activity's progress.
+  Future<WorkflowProgress> fetchWorkflowProgress({
+    required String uid,
+    required String classroomId,
+    required String learningUnitId,
+  }) async {
+    final snap = await _progressDoc(
+      uid: uid,
+      classroomId: classroomId,
+      learningUnitId: learningUnitId,
+    ).get();
+    return WorkflowProgress.fromMap(snap.data());
+  }
+
+  /// Every activity's progress for ONE classroom, keyed by learning unit id.
+  ///
+  /// ONE QUERY, NOT ONE READ PER CARD. The classroom screen shows a status on
+  /// every activity it lists, and a read per row would put a classroom running
+  /// twelve activities at twelve round trips before it could draw a single
+  /// pill.
+  ///
+  /// Filtered on a `classroomId` FIELD rather than by id prefix, because
+  /// Firestore cannot match a substring of a document id. The field is written
+  /// on every save for that reason alone, and is redundant with the id by
+  /// design.
+  Future<Map<String, WorkflowProgress>> fetchClassroomProgress({
+    required String uid,
+    required String classroomId,
+  }) async {
+    final snap = await _db
+        .collection(TeacherProfile.collection)
+        .doc(uid)
+        .collection(WorkflowProgress.collection)
+        .where('classroomId', isEqualTo: classroomId)
+        .get();
+    final byUnit = <String, WorkflowProgress>{};
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      // Skipped rather than keyed by the document id. The id is a composite of
+      // two ids either of which may contain a hyphen, so it cannot be split
+      // back apart; a row without the field is one this build cannot place.
+      final id = SafeParse.asDisplayString(data['learningUnitId']);
+      if (id == null) continue;
+      byUnit[id] = WorkflowProgress.fromMap(data);
+    }
+    return byUnit;
+  }
+
+  /// Marks one step done, or not done.
+  ///
+  /// MERGED, and only the fields this call owns. A teacher can have the same
+  /// activity open on two devices, and a whole-document write from one would
+  /// silently drop what the other recorded. `classroomId` and `learningUnitId`
+  /// are rewritten every time so a document created by an older build, before
+  /// the query above existed, gains them on its first update rather than
+  /// staying invisible to the classroom screen forever.
+  Future<void> setWorkflowStepDone({
+    required String uid,
+    required String classroomId,
+    required String learningUnitId,
+    required Set<String> completedStepIds,
+  }) => _progressDoc(
+    uid: uid,
+    classroomId: classroomId,
+    learningUnitId: learningUnitId,
+  ).set({
+    'teacherId': uid,
+    'classroomId': classroomId,
+    'learningUnitId': learningUnitId,
+    'completedStepIds': completedStepIds.toList(),
+    'updatedAt': FieldValue.serverTimestamp(),
+  }, SetOptions(merge: true));
 }
 
 /// What a saved attempt reports back to the screen.

@@ -7,8 +7,10 @@ import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/programme.dart';
 import 'package:tc_starter/core/services/firestore_service.dart';
 import 'package:tc_starter/core/theme/app_theme.dart';
+import 'package:tc_starter/features/auth/auth_provider.dart';
 import 'package:tc_starter/features/classrooms/classroom_detail_provider.dart';
 import 'package:tc_starter/features/classrooms/classroom_detail_screen.dart';
+import 'package:tc_starter/features/classrooms/widgets/programme_group_card.dart';
 import 'package:tc_starter/features/programmes/programme_detail_provider.dart';
 import 'package:tc_starter/features/programmes/programme_detail_screen.dart';
 
@@ -121,8 +123,13 @@ Future<void> pumpFlow(
   );
 
   await tester.pumpWidget(
-    Provider<FirestoreService>.value(
-      value: firestore,
+    MultiProvider(
+      providers: [
+        Provider<FirestoreService>.value(value: firestore),
+        // The classroom screen reads the uid to fetch this teacher's progress
+        // through each activity.
+        ChangeNotifierProvider<AuthProvider>(create: (_) => StubAuthProvider()),
+      ],
       child: ScreenUtilInit(
         designSize: const Size(360, 800),
         minTextAdapt: true,
@@ -150,6 +157,33 @@ Future<void> tapHeaderBack(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+
+/// Opens one programme's catalogue page.
+///
+/// TWO TAPS, NOT ONE, since the classroom screen grew expandable cards: the row
+/// bearing the programme's name now opens and shuts the card, and the route to
+/// its details is a link at the foot of the open card. Only the first
+/// programme opens itself, so a card that is already showing its link is not
+/// tapped shut on the way past.
+Future<void> openProgramme(WidgetTester tester, String name) async {
+  final card = find.ancestor(
+    of: find.text(name),
+    matching: find.byType(ProgrammeGroupCard),
+  );
+  final link = find.descendant(
+    of: card,
+    matching: find.text('View programme details'),
+  );
+  if (link.evaluate().isEmpty) {
+    await tester.tap(find.text(name));
+    await tester.pumpAndSettle();
+  }
+  await tester.ensureVisible(link);
+  await tester.pumpAndSettle();
+  await tester.tap(link);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUp(initLocalizationForTest);
 
@@ -162,12 +196,40 @@ void main() {
       expect(find.text('Beta'), findsOneWidget);
     });
 
-    testWidgets('no empty-activities banner is rendered', (tester) async {
-      // learningUnits has no documents and workflows does not exist, so every
-      // programme would otherwise carry an identical "nothing here" line.
+    testWidgets('an open programme with nothing in it says so', (tester) async {
+      // THE RULE CHANGED with the expandable cards. A flat list showed nothing
+      // under a programme with no activities, which was indistinguishable from
+      // a programme whose activities failed to draw. Now that a teacher has to
+      // OPEN a card, it owes them an answer.
+      //
+      // Only the first card is open, so exactly one line appears even though
+      // neither programme has activities here.
       await pumpFlow(tester, firestore: firestoreWith());
 
-      expect(find.textContaining('activities'), findsNothing);
+      expect(
+        find.text('No activities in this programme yet.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a shut programme is a heading and a count, nothing more', (
+      tester,
+    ) async {
+      await pumpFlow(tester, firestore: firestoreWith());
+
+      // Beta is the second programme, so it starts shut.
+      final beta = find.ancestor(
+        of: find.text('Beta'),
+        matching: find.byType(ProgrammeGroupCard),
+      );
+      expect(
+        find.descendant(of: beta, matching: find.text('View programme details')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: beta, matching: find.text('0 LUs')),
+        findsOneWidget,
+      );
     });
   });
 
@@ -177,8 +239,7 @@ void main() {
       final firestore = firestoreWith();
       await pumpFlow(tester, firestore: firestore);
 
-      await tester.tap(find.text('Alpha'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Alpha');
 
       // The catalogue document was read, by the id the classroom named.
       expect(firestore.requestedProgrammeIds, [kProgrammeAlpha]);
@@ -193,8 +254,7 @@ void main() {
         (tester) async {
       await pumpFlow(tester, firestore: firestoreWith());
 
-      await tester.tap(find.text('Beta'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Beta');
 
       // Passed in the query string rather than re-read: a round trip for one
       // line of text would be wasteful.
@@ -207,16 +267,14 @@ void main() {
       final firestore = firestoreWith();
       await pumpFlow(tester, firestore: firestore);
 
-      await tester.tap(find.text('Beta'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Beta');
       expect(find.text('P10002'), findsOneWidget);
       expect(find.text('P10001'), findsNothing);
 
       // Back to the classroom, then into the other one.
       await tapHeaderBack(tester);
 
-      await tester.tap(find.text('Alpha'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Alpha');
       expect(find.text('P10001'), findsOneWidget);
       expect(find.text('P10002'), findsNothing);
 
@@ -227,8 +285,7 @@ void main() {
         (tester) async {
       await pumpFlow(tester, firestore: firestoreWith());
 
-      await tester.tap(find.text('Alpha'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Alpha');
       expect(find.text('P10001'), findsOneWidget);
 
       await tapHeaderBack(tester);
@@ -254,8 +311,7 @@ void main() {
         ]),
       );
 
-      await tester.tap(find.text('Alpha'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Alpha');
 
       expect(find.text('Draft'), findsOneWidget);
       expect(find.text('Live'), findsNothing);
@@ -276,8 +332,7 @@ void main() {
         ]),
       );
 
-      await tester.tap(find.text('Alpha'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Alpha');
 
       expect(find.text('STEM Club programme'), findsOneWidget);
       // No grades stored, so no grades line at all rather than an empty one.
@@ -288,8 +343,7 @@ void main() {
         (tester) async {
       await pumpFlow(tester, firestore: firestoreWith());
 
-      await tester.tap(find.text('Alpha'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Alpha');
 
       expect(
         find.textContaining('No learning units have been added'),
@@ -307,8 +361,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Alpha'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Alpha');
 
       expect(find.text('Programme not available'), findsOneWidget);
       // Not an error, so no Retry.
@@ -324,8 +377,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Alpha'));
-      await tester.pumpAndSettle();
+      await openProgramme(tester, 'Alpha');
 
       expect(find.text('Could not load this programme'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);

@@ -178,6 +178,22 @@ class QuizzesProvider extends ChangeNotifier {
           // is worse than no row.
           if (assignment == null) return;
 
+          /*
+           * QUIZZES ONLY. Uploads and forms are set on a classroom exactly the
+           * same way and used to be listed here, greyed out and untappable,
+           * because a teacher should arguably see everything set for their
+           * class. They are dropped instead: this app can answer neither, so
+           * every one of them was a row that could only disappoint, and they
+           * pushed the quizzes that ARE answerable further down the card.
+           *
+           * FILTERED HERE RATHER THAN IN THE SCREEN so the chip count and the
+           * "no assignments" empty state agree with what is actually rendered.
+           * A classroom whose only assignment is an upload now correctly reads
+           * as having nothing, rather than showing a count of one and a list of
+           * none.
+           */
+          if (!assignment.isQuiz) return;
+
           rows.add(
             AssignmentInClassroom(
               assignment: assignment,

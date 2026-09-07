@@ -94,23 +94,49 @@ void main() {
   }
 
   group('the limit is stated before it is hit', () {
-    testWidgets('shows the photo and size caps on arrival', (tester) async {
+    testWidgets('shows the format, size and count caps on arrival', (
+      tester,
+    ) async {
       await pumpPanel(tester);
 
+      // ONE LINE NOW, under the buttons, naming all three reasons a pick can
+      // be refused. It used to be two lines above them: a size sentence and a
+      // separate "0 of 3 added" counter.
       expect(
-        find.text('You can add up to 3 photos, 3 MB each.'),
+        find.text('JPG or PNG · up to 3 MB each · 3 photos max'),
         findsOneWidget,
       );
-      expect(find.text('0 of 3 added'), findsOneWidget);
     });
 
-    testWidgets('the counter tracks what has been added', (tester) async {
+    testWidgets('the header counts what has been SUBMITTED, not picked', (
+      tester,
+    ) async {
+      // THE DISTINCTION THE OLD COUNTER BLURRED. It read "1 of 3 added" the
+      // moment a photo was chosen, before anything left the phone, which is
+      // the one number a teacher must not be reassured by: nothing is sent
+      // until Submit. The header now reports what is actually stored.
       final provider = await pumpPanel(tester, queue: [photo()]);
 
       await provider.pick(PhotoSource.camera);
       await tester.pumpAndSettle();
 
-      expect(find.text('1 of 3 added'), findsOneWidget);
+      expect(find.text('0 of 3 submitted'), findsOneWidget);
+      // And the picked photo is still visible, as pending.
+      expect(provider.pending, hasLength(1));
+    });
+
+    testWidgets('a submitted photo does count in the header', (tester) async {
+      await pumpPanel(
+        tester,
+        existing: const AssignmentEvidence(
+          assignmentId: 'asg_mps_evidence',
+          photoUrls: ['u0'],
+          storagePaths: ['p0'],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 3 submitted'), findsOneWidget);
     });
   });
 
@@ -118,8 +144,8 @@ void main() {
     testWidgets('camera and gallery are both present', (tester) async {
       await pumpPanel(tester);
 
-      expect(find.text('Camera'), findsOneWidget);
-      expect(find.text('Gallery'), findsOneWidget);
+      expect(find.text('Take Photo'), findsOneWidget);
+      expect(find.text('From Gallery'), findsOneWidget);
     });
 
     testWidgets('both are disabled once three photos are held', (tester) async {
@@ -135,7 +161,7 @@ void main() {
 
       expect(provider.remainingSlots, 0);
       // Disabled rather than inviting a photo that would be refused.
-      for (final label in ['Camera', 'Gallery']) {
+      for (final label in ['Take Photo', 'From Gallery']) {
         final button = tester.widget<OutlinedButton>(
           find.ancestor(
             of: find.text(label),
@@ -265,7 +291,7 @@ void main() {
         existing: const AssignmentEvidence(
           assignmentId: 'asg_mps_evidence',
           photoUrls: ['https://example/p0?token=stale'],
-          storagePaths: ['activityEvidence/cls/lu/uid_1_0.jpg'],
+          storagePaths: ['teacher_submissions/uid/cls_lu_1_0.jpg'],
         ),
       );
       await tester.pumpAndSettle();
@@ -274,7 +300,7 @@ void main() {
         find.byType(EvidenceThumbnail),
       );
       // The path is the stable identity; the URL carries a token and is not.
-      expect(thumb.storagePath, 'activityEvidence/cls/lu/uid_1_0.jpg');
+      expect(thumb.storagePath, 'teacher_submissions/uid/cls_lu_1_0.jpg');
       expect(thumb.file, isNull);
     });
   });

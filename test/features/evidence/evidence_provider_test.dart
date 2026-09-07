@@ -274,12 +274,19 @@ void main() {
       await t.provider.submit();
 
       expect(t.storage.uploaded, [
-        'activityEvidence/$_classroom/$_lu/${_uid}_${_millis}_0.jpg',
-        'activityEvidence/$_classroom/$_lu/${_uid}_${_millis}_1.jpg',
+        'teacher_submissions/$_uid/${_classroom}_${_lu}_${_millis}_0.jpg',
+        'teacher_submissions/$_uid/${_classroom}_${_lu}_${_millis}_1.jpg',
       ]);
-      // The uid is what makes a submission attributable.
+      // THE UID IS THE SECOND SEGMENT, not just present somewhere in the
+      // string. The deployed rule binds it as {teacherId} and compares it to
+      // request.auth.uid, so a uid that moved into the filename would leave
+      // the object at a path the rule refuses. Asserted positionally for that
+      // reason rather than with `contains`.
       for (final path in t.storage.uploaded) {
-        expect(path, contains(_uid));
+        expect(path.split('/')[1], _uid);
+        // Exactly three segments: the rule's {fileName} binds ONE, so any
+        // extra slash puts the object where no rule claims it.
+        expect(path.split('/').length, 3);
       }
     });
 

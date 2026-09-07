@@ -23,6 +23,15 @@ dependencies:
   # ── Navigation ──────────────────────────────────────────────────────────
   go_router: ^14.8.1
 
+  # ── The LAST RESORT for a workflow's content, no longer the first ───────
+  #    This used to be the whole content strategy: every guide, video and reel
+  #    was handed to the system and rendered by whatever the phone already had.
+  #    A teacher mid-class does not come back from a context switch, so all
+  #    four formats are now rendered in-app (see the viewers below) and this is
+  #    left for what genuinely cannot be: a slot holding a plain web page, and
+  #    the fallback offered when an in-app viewer fails on a given device.
+  url_launcher: ^6.3.1
+
   # ── Responsiveness. PINNED to an exact version on purpose. Do not float:
   #    minor releases of this package have changed scaling behaviour before.
   flutter_screenutil: 5.9.3
@@ -43,6 +52,35 @@ dependencies:
   intl: ^0.20.2
   image_picker: ^1.1.2
   cupertino_icons: ^1.0.8
+
+  # ── In-app viewers, one per kind of thing a step's content resolves to ──
+  #    THE KIND IS DECIDED BY THE RESOLVED FILE, NOT THE SLOT. Live data has
+  #    `graphics.headlineImage` and `graphics.3DConversion` both holding
+  #    Sample.pdf, so choosing a viewer from the slot's category draws a PDF as
+  #    a broken image. See lib/core/models/resource_kind.dart.
+
+  #    YouTube links: `video.tacVideoDriveUrl` and its siblings hold a real
+  #    watch URL, with `&list=` and `&start_radio=` still attached. The iframe
+  #    player rather than youtube_player_flutter because that one is
+  #    unmaintained and pins an old webview. Mounted only after a tap on the
+  #    thumbnail, so opening the tab costs no webview and no network.
+  youtube_player_iframe: ^6.0.2
+
+  #    mp4s in Storage: `video.tacVideoMp4`, `socialMedia.tacVideoReelMp4`.
+  #    Played from the cached file where there is one, so a reel watched in the
+  #    staff room still plays in a classroom with no signal.
+  video_player: ^2.11.1
+
+  #    PDFs in Storage: `tacDev.devGuidePdf`, and half of `graphics`. Wraps the
+  #    native AndroidPdfViewer, which is the cheapest of the options on a
+  #    low-end classroom phone and needs no commercial licence. It renders a
+  #    LOCAL FILE only, which is why the Storage source gained a download().
+  flutter_pdfview: ^1.4.5
+
+  #    Slide decks and documents, which nothing on Android renders natively.
+  #    Shown through Google's viewer in a webview. Arrives transitively with
+  #    youtube_player_iframe; declared for the reason flutter_cache_manager is.
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:

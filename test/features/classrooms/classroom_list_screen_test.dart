@@ -60,6 +60,7 @@ Future<void> pumpList(
   Duration timeout = const Duration(seconds: 15),
   Size surfaceSize = const Size(360, 800),
   TextScaler textScaler = TextScaler.noScaling,
+  String? initialQuery,
 }) {
   return pumpScreen(
     tester,
@@ -73,7 +74,7 @@ Future<void> pumpList(
             ClassroomProvider(firestore: firestore, timeout: timeout),
       ),
     ],
-    child: const ClassroomListScreen(),
+    child: ClassroomListScreen(initialQuery: initialQuery),
   );
 }
 
@@ -81,7 +82,7 @@ void main() {
   // Per test, not once: each test gets an independent localization state.
   setUp(initLocalizationForTest);
 
-  testWidgets('renders a card per classroom, with the student count', (
+  testWidgets('renders a card per classroom, naming its school and programmes', (
     tester,
   ) async {
     await pumpList(
@@ -95,13 +96,22 @@ void main() {
     expect(find.byType(ClassroomCard), findsNWidgets(2));
     expect(find.text('7 A'), findsOneWidget);
     expect(find.text('Oak ET Club'), findsOneWidget);
-    // studentCounter comes from the authoritative document, not the teacher's
-    // denormalised copy.
-    expect(find.text('32 students'), findsOneWidget);
-    expect(find.text('12 students'), findsOneWidget);
+    // The school gets its own line on every row. Both classrooms are at the
+    // same one, and it is repeated rather than grouped: this list is scanned
+    // for a single classroom, and a row that does not name its school is
+    // ambiguous the moment a teacher works at two.
+    expect(find.text('Test School Oak'), findsNWidgets(2));
+    // Programmes as a count rather than names. Both run TIP 2026 alone, so
+    // both read "1 Programme" and neither says "1 Programmes".
+    expect(find.text('1 Programme'), findsNWidgets(2));
+    // The student count left this row deliberately. It is a fact ABOUT a
+    // classroom rather than a way to recognise one, and it is still on the
+    // classroom's own screen. `studentCounter` is loaded here regardless,
+    // because the search and the detail screen both want it.
+    expect(find.textContaining('students'), findsNothing);
   });
 
-  testWidgets('the ET club shows no grade and never the word null', (
+  testWidgets('no row shows a grade, and none ever shows the word null', (
     tester,
   ) async {
     await pumpList(
@@ -112,10 +122,15 @@ void main() {
       ),
     );
 
+    // The ET club's `grade` is the String "ET", which SafeParse turns into
+    // null. That null must never reach a teacher, whatever the row happens to
+    // render this month.
     expect(find.textContaining('null'), findsNothing);
-    expect(find.textContaining('Grade 0'), findsNothing);
-    // The 7 A card does show its grade.
-    expect(find.textContaining('Grade 7'), findsOneWidget);
+    // The grade left the row along with the student count. It duplicated the
+    // name in this data: "7 A" IS the classroom's name, and "Grade 7 · A"
+    // said it a second time. Dropping it is what let the school move up to its
+    // own line.
+    expect(find.textContaining('Grade'), findsNothing);
   });
 
   testWidgets('typing "oak" keeps both, because it matches the institution', (
@@ -244,6 +259,101 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Could not load your classrooms'), findsOneWidget);
+  });
+
+  group('arriving with a search already typed', () {
+    // How a school row on the dashboard opens "its" classrooms. There is no
+    // schools screen, so tapping one seeds the search that already matches on
+    // institution rather than building a second, narrower list beside it.
+
+    testWidgets('a school name filters the list on arrival', (tester) async {
+      await pumpList(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: Teacher.fromMap('uid_1', {
+            'classrooms': {
+              'cls_oak': {
+                'classroomName': '7 A',
+                'institutionName': 'Test School Oak',
+              },
+              'cls_airaa': {
+                'classroomName': '4 A',
+                'institutionName': 'Airaa Academy',
+              },
+            },
+          }),
+        ),
+        initialQuery: 'Airaa Academy',
+      );
+
+      expect(find.byType(ClassroomCard), findsOneWidget);
+      expect(find.text('4 A'), findsOneWidget);
+      expect(find.text('7 A'), findsNothing);
+    });
+
+    testWidgets('the term is in the search bar, and can be cleared', (
+      tester,
+    ) async {
+      // A SUGGESTION, NOT A LOCK. The teacher has to be able to see why the
+      // list is short and undo it without leaving the screen, which is the
+      // whole reason this seeds the existing search instead of applying a
+      // filter of its own.
+      await pumpList(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          classrooms: seededClassrooms(),
+        ),
+        initialQuery: 'Oak ET Club',
+      );
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'Oak ET Club',
+      );
+      expect(find.byType(ClassroomCard), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ClassroomCard), findsNWidgets(2));
+    });
+
+    testWidgets('seeding survives the load that clears the previous query', (
+      tester,
+    ) async {
+      // The ordering trap. `load` wipes the query synchronously before its
+      // first await, so seeding before it would leave the teacher looking at
+      // an unfiltered list with text sitting in the search bar.
+      await pumpList(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          classrooms: seededClassrooms(),
+        ),
+        initialQuery: 'zzzz',
+      );
+
+      expect(find.text('No classrooms match'), findsOneWidget);
+    });
+
+    testWidgets('no query behaves exactly as arriving from the tab', (
+      tester,
+    ) async {
+      await pumpList(
+        tester,
+        firestore: FakeFirestoreService(
+          teacher: seededTeacher(),
+          classrooms: seededClassrooms(),
+        ),
+      );
+
+      expect(find.byType(ClassroomCard), findsNWidgets(2));
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        '',
+      );
+    });
   });
 
   group('rotated to landscape', () {

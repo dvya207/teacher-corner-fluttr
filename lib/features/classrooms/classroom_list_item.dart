@@ -43,6 +43,20 @@ class ClassroomListItem {
   /// an identity. The dashboard's "N Programmes" is computed from these.
   final List<String> programmeIds;
 
+  /// How many DISTINCT programmes this classroom runs.
+  ///
+  /// BY ID, NOT BY NAME, which is the whole reason [programmeIds] is carried
+  /// beside the labels: two programmes can share a display name, so counting
+  /// names would merge two real programmes into one. Counting the raw list would
+  /// make the opposite mistake, since a classroom document can name the same
+  /// programme twice.
+  ///
+  /// Falls back to the label count only when no ids came through, so a classroom
+  /// whose ids failed to parse still reports something rather than zero.
+  int get distinctProgrammeCount => programmeIds.isEmpty
+      ? programmeLabels.length
+      : programmeIds.where((id) => id.trim().isNotEmpty).toSet().length;
+
   final bool isStemClub;
 
   /// False when the teacher's document references a classroom whose real
@@ -114,7 +128,9 @@ class ClassroomListItem {
     required List<ClassroomRef> refs,
     required List<Classroom> full,
   }) {
-    final byId = {for (final classroom in full) classroom.classroomId: classroom};
+    final byId = {
+      for (final classroom in full) classroom.classroomId: classroom,
+    };
     return [
       for (final ref in refs)
         ClassroomListItem.merge(ref: ref, full: byId[ref.classroomId]),

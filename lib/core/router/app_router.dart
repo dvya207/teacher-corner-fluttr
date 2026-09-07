@@ -11,12 +11,19 @@ import '../../features/classrooms/classroom_list_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/learning_unit/learning_unit_provider.dart';
 import '../../features/learning_unit/missing_workflow_screen.dart';
+import '../../features/learning_unit/learning_unit_overview_screen.dart';
 import '../../features/learning_unit/learning_unit_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/shell/main_shell.dart';
+import '../../features/quizzes/quiz_player_provider.dart';
+import '../../features/quizzes/quiz_player_screen.dart';
 import '../../features/quizzes/quizzes_provider.dart';
 import '../../features/quizzes/quizzes_screen.dart';
-import '../../features/shell/not_built_screen.dart';
+import '../../features/auth/auth_provider.dart';
+import '../../features/reports/reports_hub_screen.dart';
+import '../../features/reports/submissions_screen.dart';
+import '../../features/reports/submission_activities_screen.dart';
+import '../../features/reports/submissions_provider.dart';
 import '../../features/profile/help_guide_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../services/firestore_service.dart';
@@ -109,7 +116,12 @@ class AppRouter {
             ),
             GoRoute(
               path: '/classrooms',
-              builder: (context, state) => const ClassroomListScreen(),
+              // `?q=` seeds the search. A dashboard school row lands here with
+              // its own name already typed in; see ClassroomListScreen.
+              builder: (context, state) => ClassroomListScreen(
+                key: ValueKey(state.uri.queryParameters['q'] ?? ''),
+                initialQuery: state.uri.queryParameters['q'],
+              ),
               routes: [
                 // Nested so the breadcrumb/back stack works: /classrooms/:id
                 GoRoute(
@@ -183,10 +195,52 @@ class AppRouter {
             ),
             GoRoute(
               path: '/reports',
-              builder: (context, state) => const NotBuiltScreen(
-                titleKey: 'nav.reports',
-                icon: Icons.bar_chart_outlined,
-              ),
+              builder: (context, state) => const ReportsHubScreen(),
+              routes: [
+                // NESTED, so the hub stays in the stack and Back returns to it
+                // rather than to whichever tab was open before.
+                GoRoute(
+                  path: 'submissions',
+                  builder: (context, state) =>
+                      ChangeNotifierProvider<SubmissionsProvider>(
+                        create: (ctx) {
+                          final auth = ctx.read<AuthProvider>();
+                          return SubmissionsProvider(
+                            firestore: ctx.read<FirestoreService>(),
+                            uid: auth.uid,
+                            phoneNumber: auth.phoneNumber,
+                          );
+                        },
+                        child: const SubmissionsScreen(),
+                      ),
+                  routes: [
+                    // BOTH IDS IN THE PATH, not carried in provider state. The
+                    // report is a place a teacher can be sent back to, and a
+                    // screen whose subject lives only in memory cannot be
+                    // restored after the process is killed mid-lesson.
+                    GoRoute(
+                      path: ':classroomId/:programmeId',
+                      builder: (context, state) {
+                        final classroomId =
+                            state.pathParameters['classroomId'] ?? '';
+                        final programmeId =
+                            state.pathParameters['programmeId'] ?? '';
+                        return ChangeNotifierProvider<
+                          ActivitySubmissionsProvider
+                        >(
+                          create: (ctx) => ActivitySubmissionsProvider(
+                            firestore: ctx.read<FirestoreService>(),
+                            uid: ctx.read<AuthProvider>().uid,
+                            classroomId: classroomId,
+                            programmeId: programmeId,
+                          ),
+                          child: const SubmissionActivitiesScreen(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
             GoRoute(
               path: '/profile',
@@ -206,32 +260,146 @@ class AppRouter {
           path: '/help',
           builder: (context, state) => const HelpGuideScreen(),
         ),
+        /*
+         * THE QUIZ PLAYER IS TOP-LEVEL, NOT NESTED UNDER `/quizzes`.
+         *
+         * It used to be a nested route inside the ShellRoute, and that threw
+         * "A GlobalKey was used multiple times inside one widget's child list"
+         * and painted the red error screen the moment a quiz was opened from a
+         * workflow step. The step player at `/lu/:id/steps` is itself a
+         * top-level route, deliberately outside the shell, so pushing a
+         * shell-nested route from it asked go_router to build the shell's
+         * Navigator underneath a route already mounted on the root one. Two
+         * Navigators cannot share a GlobalKey, so the build asserted.
+         *
+         * REACHED FROM BOTH SIDES OF THE SHELL BOUNDARY, which is the real
+         * reason it cannot live inside: the Quizzes tab pushes it from within
+         * the shell and a workflow step pushes it from outside. A route with
+         * two callers on opposite sides of a shell has to sit above both.
+         *
+         * It also belongs here on the app's own terms. `LearningUnitScreen`
+         * is outside the shell because "a teacher in the middle of a step
+         * should not be one stray tap from another tab", and a teacher in the
+         * middle of a timed, attempt-capped quiz has the stronger claim to
+         * the same protection.
+         *
+         * THE PATH IS UNCHANGED, so every call site still pushes
+         * `/quizzes/play`. It keeps the URL honest about which tab the quiz
+         * belongs to without nesting the ROUTE inside that tab.
+         *
+         * THE TARGET COMES THROUGH `extra` rather than the path: the player
+         * needs a whole parsed Assignment, and the classroom and programme
+         * that allotted it are properties of the list ROW, which an id in the
+         * URL could not express without three more reads.
+         */
         GoRoute(
-          path: '/lu/:id',
+          path: '/quizzes/play',
           builder: (context, state) {
-            final learningUnitId = state.pathParameters['id']!;
-            final workflowId =
-                state.uri.queryParameters['workflowId']?.trim() ?? '';
-            if (workflowId.isEmpty) {
-              return const MissingWorkflowScreen();
+            final extra = state.extra;
+
+            // A DEEP LINK CANNOT CARRY `extra`, so this is reachable with
+            // nothing to play. Show the list rather than crash.
+            if (extra is! QuizPlayTarget) {
+              return ChangeNotifierProvider<QuizzesProvider>(
+                create: (ctx) => QuizzesProvider(
+                  firestore: ctx.read<FirestoreService>(),
+                ),
+                child: const QuizzesScreen(),
+              );
             }
-            final query = state.uri.queryParameters;
-            return ChangeNotifierProvider<LearningUnitProvider>(
-              create: (ctx) =>
-                  LearningUnitProvider(firestore: ctx.read<FirestoreService>()),
-              child: LearningUnitScreen(
-                learningUnitId: learningUnitId,
-                workflowId: workflowId,
-                // Both needed to address the evidence document, which is one
-                // per classroom+programme. Absent, the steps still work and
-                // only the evidence pane says it cannot be reached.
-                classroomId: query['classroomId']?.trim(),
-                programmeId: query['programmeId']?.trim(),
+
+            return ChangeNotifierProvider<QuizPlayerProvider>(
+              create: (ctx) => QuizPlayerProvider(
+                firestore: ctx.read<FirestoreService>(),
+                assignment: extra.assignment,
+                teacherDocId: extra.teacherDocId,
+                uid: extra.uid,
+                classroomId: extra.classroomId,
+                programmeId: extra.programmeId,
               ),
+              child: const QuizPlayerScreen(),
             );
           },
         ),
+        // An activity is TWO screens: what it is, and running it.
+        //
+        // `/lu/:id` is the overview a teacher lands on, and `/lu/:id/steps` the
+        // player it hands over to. Nested, so back from a step returns to the
+        // overview rather than all the way out to the classroom, and so the
+        // path itself records which of the two a teacher is on.
+        GoRoute(
+          path: '/lu/:id',
+          builder: (context, state) => _luScreen(
+            state,
+            (learningUnitId, workflowId, query) =>
+                LearningUnitOverviewScreen(
+                  learningUnitId: learningUnitId,
+                  workflowId: workflowId,
+                  // Progress is per classroom. Without one it can be shown but
+                  // not recorded; see LearningUnitProvider.canRecordProgress.
+                  classroomId: query['classroomId']?.trim(),
+                  programmeId: query['programmeId']?.trim(),
+                  breadcrumb: _breadcrumb(query),
+                ),
+          ),
+          routes: [
+            GoRoute(
+              path: 'steps',
+              builder: (context, state) => _luScreen(
+                state,
+                (learningUnitId, workflowId, query) => LearningUnitScreen(
+                  learningUnitId: learningUnitId,
+                  workflowId: workflowId,
+                  // Both needed to address the evidence document, which is one
+                  // per classroom+programme. Absent, the steps still work and
+                  // only the evidence pane says it cannot be reached.
+                  classroomId: query['classroomId']?.trim(),
+                  programmeId: query['programmeId']?.trim(),
+                  initialStep: int.tryParse(query['step'] ?? ''),
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
+  }
+
+  /// The guard and the provider both activity screens need.
+  ///
+  /// SHARED, because the workflow check is the load-bearing half. The workflow
+  /// id is a property of the CLASSROOM's binding rather than of the unit, so a
+  /// link that arrives without one cannot be repaired by reading anything, and
+  /// both screens have to refuse it the same way rather than one of them
+  /// rendering an activity with no steps.
+  static Widget _luScreen(
+    GoRouterState state,
+    Widget Function(
+      String learningUnitId,
+      String workflowId,
+      Map<String, String> query,
+    )
+    build,
+  ) {
+    final learningUnitId = state.pathParameters['id']!;
+    final query = state.uri.queryParameters;
+    final workflowId = query['workflowId']?.trim() ?? '';
+    if (workflowId.isEmpty) return const MissingWorkflowScreen();
+    return ChangeNotifierProvider<LearningUnitProvider>(
+      create: (ctx) =>
+          LearningUnitProvider(firestore: ctx.read<FirestoreService>()),
+      child: build(learningUnitId, workflowId, query),
+    );
+  }
+
+  /// "test school oak Science Grade ET · 7 A", from what the caller already
+  /// knew. Null when neither name travelled, so the header drops the line
+  /// rather than drawing an empty one.
+  static String? _breadcrumb(Map<String, String> query) {
+    final parts = [
+      query['classroomName']?.trim(),
+      query['programmeName']?.trim(),
+    ].whereType<String>().where((s) => s.isNotEmpty).toList();
+    return parts.isEmpty ? null : parts.join(' \u00b7 ');
   }
 }

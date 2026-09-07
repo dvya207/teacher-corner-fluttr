@@ -194,18 +194,20 @@ void main() {
       expect(workflow.steps.first.contents.single.hasResource, isFalse);
     });
 
-    test('the seeded image contents resolve as images with real paths', () {
+    test('the seeded image contents carry real Storage paths', () {
+      // NO LONGER ASSERTS A KIND. Deciding what a content holds moved off this
+      // class, because the category it used to read lies in live data; see the
+      // note where isImage used to be, and resource_kind_test.dart for the
+      // classification these paths now get.
       final workflow = Workflow.fromMap('wf_mps_v1', seededWorkflow());
 
       final materials = workflow.steps[1].contents.single;
-      expect(materials.isImage, isTrue);
       expect(materials.hasResource, isTrue);
       // A Storage path, never a URL.
       expect(materials.resourcePath, isNot(startsWith('http')));
 
       final build = workflow.steps[2].contents;
       expect(build, hasLength(2));
-      expect(build.first.isImage, isTrue);
       expect(build.first.hasResource, isTrue);
       expect(build.last.hasResource, isFalse);
     });
@@ -274,35 +276,16 @@ void main() {
     WorkflowContent content(Map<String, dynamic> data) =>
         WorkflowContent.fromMap(data, docId: 'wf', field: 'steps.contents');
 
-    test('an image is recognised from its declared type', () {
-      expect(
-        content({'contentType': 'image', 'resourcePath': 'a/b.bin'}).isImage,
-        isTrue,
-      );
-    });
+    // WHAT USED TO BE HERE. Six tests pinning `isImage` and `isDocument`, both
+    // of which guessed a file's kind from the slot's name and its own empty
+    // resourcePath. They passed against the seeded fixtures and were wrong
+    // against the database: `graphics.headlineImage` holds a PDF. The kind is
+    // decided from the resolved value now, and its tests live in
+    // test/core/models/resource_kind_test.dart against real live strings.
+    //
+    // The one case worth keeping is not about file kinds at all.
 
-    test('an image is recognised from its file extension', () {
-      // The seeded documents label some images only by file name.
-      for (final path in [
-        'luImages/mps.png',
-        'luImages/mps.JPG',
-        'luImages/mps.jpeg',
-        'luImages/mps.webp',
-      ]) {
-        expect(content({'resourcePath': path}).isImage, isTrue, reason: path);
-      }
-    });
-
-    test('a document is not mistaken for an image', () {
-      final guide = content({
-        'contentCategory': 'guide',
-        'resourcePath': 'guides/mps.pdf',
-      });
-      expect(guide.isImage, isFalse);
-      expect(guide.isDocument, isTrue);
-    });
-
-    test('the upload assignment is not treated as a picture to display', () {
+    test('the upload assignment is typed as an upload, name notwithstanding', () {
       // Its name mentions photos, but it is a place to PUT photos.
       final assignment = content({
         'contentName': 'Photo evidence',
@@ -311,15 +294,86 @@ void main() {
         'resourcePath': '',
       });
       expect(assignment.isUploadAssignment, isTrue);
-      expect(assignment.isImage, isFalse);
     });
 
-    test('an empty resourcePath is neither image nor document', () {
+    test('an empty resourcePath is not mistaken for a resource', () {
       // Present but useless, which is what every seeded content has.
       final empty = content({'contentName': 'Guide', 'resourcePath': ''});
       expect(empty.hasResource, isFalse);
-      expect(empty.isImage, isFalse);
-      expect(empty.isDocument, isFalse);
+    });
+  });
+
+  /// The field the live data actually uses.
+  ///
+  /// Added after every activity in `teacher-corner-dev` rendered "No steps yet".
+  /// The parser read `steps`; every workflow document there writes
+  /// `workflowSteps`, and so does the collection's own `--schema--` marker. The
+  /// failure was silent, which is why it survived a whole feature being built on
+  /// top of it.
+
+  group('where the steps are read from', () {
+    test('reads workflowSteps, as the live documents write it', () {
+      final wf = Workflow.fromMap('wf', {
+        'workflowSteps': [
+          {'workflowStepName': 'Create or start', 'sequenceNumber': 1},
+          {'workflowStepName': 'Feedback', 'sequenceNumber': 2},
+        ],
+      });
+
+      expect(wf.steps, hasLength(2));
+      expect(wf.steps.first.label, 'Create or start');
+    });
+
+    test('still reads steps, which the fixtures and the seed use', () {
+      final wf = Workflow.fromMap('wf', {
+        'steps': [
+          {'workflowStepName': 'Introduce', 'sequenceNumber': 1},
+        ],
+      });
+
+      expect(wf.steps, hasLength(1));
+      expect(wf.steps.single.label, 'Introduce');
+    });
+
+    test('live data wins when a document somehow carries both', () {
+      final wf = Workflow.fromMap('wf', {
+        'workflowSteps': [
+          {'workflowStepName': 'Real', 'sequenceNumber': 1},
+        ],
+        'steps': [
+          {'workflowStepName': 'Legacy', 'sequenceNumber': 1},
+        ],
+      });
+
+      expect(wf.steps.single.label, 'Real');
+    });
+
+    test('neither field means no steps, not a crash', () {
+      expect(Workflow.fromMap('wf', {}).steps, isEmpty);
+    });
+
+    test('a real step map parses its duration and skip flag', () {
+      // Shaped exactly as teacher-corner-dev stores it.
+      final wf = Workflow.fromMap('wf', {
+        'workflowSteps': [
+          {
+            'workflowStepName': 'Create or start',
+            'sequenceNumber': 1,
+            'workflowStepDescription': 'watch',
+            'workflowStepDuration': 20,
+            'canSkipWorkflowStep': true,
+            'allowArtefactUpload': false,
+            'contents': [
+              {'contentName': 'Tactivity', 'contentCategory': 'video'},
+            ],
+          },
+        ],
+      });
+
+      final step = wf.steps.single;
+      expect(step.durationMinutes, 20);
+      expect(step.canSkip, isTrue);
+      expect(step.contents, hasLength(1));
     });
   });
 }

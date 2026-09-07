@@ -16,29 +16,49 @@ import 'classroom_provider.dart';
 import 'widgets/classroom_card.dart';
 
 class ClassroomListScreen extends StatefulWidget {
-  const ClassroomListScreen({super.key});
+  const ClassroomListScreen({super.key, this.initialQuery});
+
+  /// Search text to arrive with, from `/classrooms?q=`.
+  ///
+  /// How a school row on the dashboard opens "its" classrooms. There is no
+  /// schools screen and no per-school query, because a school here is just a
+  /// grouping of classrooms by name. So tapping one seeds the search that
+  /// already matches on institution, rather than building a second, narrower
+  /// list beside it.
+  ///
+  /// IN THE URL, not passed through `extra`, so the state survives a restore
+  /// and can be shared or deep-linked. It is a suggestion the teacher can
+  /// edit or clear, not a filter locked on: the search bar shows the text and
+  /// behaves exactly as if they had typed it.
+  final String? initialQuery;
 
   @override
   State<ClassroomListScreen> createState() => _ClassroomListScreenState();
 }
 
 class _ClassroomListScreenState extends State<ClassroomListScreen> {
-  final _searchController = TextEditingController();
+  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
+    final initial = widget.initialQuery?.trim() ?? '';
+    _searchController = TextEditingController(text: initial);
+
     // Post-frame: load() notifies listeners, and notifying during build throws.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final auth = context.read<AuthProvider>();
       final uid = auth.uid;
+      final classrooms = context.read<ClassroomProvider>();
       if (uid != null) {
-        context.read<ClassroomProvider>().load(
-              uid,
-              phoneNumber: auth.phoneNumber,
-            );
+        classrooms.load(uid, phoneNumber: auth.phoneNumber);
       }
+      // AFTER load, never before. `load` clears the previous query
+      // synchronously before its first await, so seeding first would set a
+      // term that load then wiped, and the teacher would arrive at an
+      // unfiltered list with text sitting in the search bar.
+      if (initial.isNotEmpty) classrooms.search(initial);
     });
   }
 

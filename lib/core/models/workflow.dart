@@ -1,5 +1,6 @@
 import '../utils/keyed_entries.dart';
 import '../utils/safe_parse.dart';
+import 'learning_unit.dart';
 
 /// One piece of content inside a workflow step: a guide, a material list, an
 /// image, an upload assignment.
@@ -7,7 +8,9 @@ class WorkflowContent {
   const WorkflowContent({
     this.contentName,
     this.contentCategory,
+    this.contentSubCategory,
     this.contentType,
+    this.additionalResourceType,
     this.resourcePath,
     this.assignmentType,
     this.assignmentId,
@@ -15,7 +18,17 @@ class WorkflowContent {
 
   final String? contentName;
   final String? contentCategory;
+
+  /// Which resource of [contentCategory] this content is, and the ONLY thing
+  /// that identifies the file: the step's own `resourcePath` is empty in live
+  /// data. See [LearningUnitResources].
+  final String? contentSubCategory;
   final String? contentType;
+
+  /// Which KIND of extra file this slot expects, e.g. "PPT". Only meaningful
+  /// when [contentCategory] is the additional-resources one, where there is no
+  /// subCategory to identify a specific file.
+  final String? additionalResourceType;
 
   /// A Storage path when populated. Empty string on several seeded contents,
   /// which is not the same as absent, so callers must check for both.
@@ -26,52 +39,69 @@ class WorkflowContent {
 
   /// True when this content is the photo-evidence upload rather than something
   /// to read.
+  /// True for any of the three assignment kinds. The category alone does not
+  /// say which.
+  bool get isAssignment =>
+      (contentCategory ?? '').toLowerCase() == 'assignment' ||
+      _assignmentType.isNotEmpty;
+
+  String get _assignmentType => (assignmentType ?? '').trim().toUpperCase();
+
+  /// EVERY assignment used to be treated as an upload, and that was the bug
+  /// behind three steps that all showed the same photo panel.
+  ///
+  /// The old rule was "type is UPLOAD **or** category is assignment", so a QUIZ
+  /// and a FORM both satisfied the second half and rendered the evidence pane.
+  /// A teacher opening "Quizzzz" got a camera. The type is what distinguishes
+  /// them and it is populated on every live content, so it decides.
+  ///
+  /// An assignment with NO type still falls here, because that is what the
+  /// category alone used to mean and an upload pane at least degrades to
+  /// something a teacher can close.
   bool get isUploadAssignment =>
-      (assignmentType ?? '').toUpperCase() == 'UPLOAD' ||
-      (contentCategory ?? '').toLowerCase() == 'assignment';
+      isAssignment && (_assignmentType == 'UPLOAD' || _assignmentType.isEmpty);
+
+  /// A quiz to sit, opened in the player the Quizzes tab already uses.
+  bool get isQuizAssignment => isAssignment && _assignmentType == 'QUIZ';
+
+  /// A feedback form to fill in.
+  bool get isFormAssignment => isAssignment && _assignmentType == 'FORM';
 
   bool get hasResource => (resourcePath ?? '').trim().isNotEmpty;
 
-  static const Set<String> _imageExtensions = {
-    '.png',
-    '.jpg',
-    '.jpeg',
-    '.webp',
-    '.gif',
-  };
+  /// The category, reduced to letters and lowercased, so 'externalResources'
+  /// and 'external resources' compare equal. Three systems have written this
+  /// field and none of them agreed on spacing or casing.
+  String get _normalisedCategory =>
+      (contentCategory ?? '').toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
 
-  static const Set<String> _documentExtensions = {
-    '.pdf',
-    '.doc',
-    '.docx',
-    '.ppt',
-    '.pptx',
-  };
+  /// True when this content points at the unit's free-form extras rather than
+  /// at a fixed resource slot. Matched loosely because the stored value is
+  /// "additional resources", with a space, and nothing guarantees the casing.
+  bool get isAdditionalResources =>
+      _normalisedCategory == 'additionalresources';
 
-  /// True when this content is a picture to show rather than something to read.
+  /// True when this content points at one of the unit's External Resources,
+  /// which live on the unit document rather than in a maturity resource
+  /// document. See [LearningUnit.externalResourcePath].
+  bool get isExternalResources =>
+      _normalisedCategory == LearningUnit.externalResourcesCategory;
+
+  /// WHAT KIND OF THING THIS CONTENT HOLDS IS NOT ANSWERABLE FROM HERE, and
+  /// there used to be an `isImage` and an `isDocument` on this class that
+  /// answered it anyway. They read `contentType`, `contentCategory` and this
+  /// content's own `resourcePath`, and both inputs let them down:
   ///
-  /// Checks the declared type and category first, then falls back to the
-  /// resource extension, because the seeded documents label an image only by
-  /// its file name.
-  bool get isImage {
-    final declared = '${contentType ?? ''} ${contentCategory ?? ''}'
-        .toLowerCase();
-    if (declared.contains('image') || declared.contains('photo')) {
-      // An upload assignment mentions photos but is not a picture to display.
-      return !isUploadAssignment;
-    }
-    return _hasExtensionIn(_imageExtensions);
-  }
-
-  /// A file we cannot render inline (a PDF guide, a slide deck). Worth naming
-  /// on screen rather than pretending it is not there.
-  bool get isDocument => !isImage && _hasExtensionIn(_documentExtensions);
-
-  bool _hasExtensionIn(Set<String> extensions) {
-    final path = (resourcePath ?? '').trim().toLowerCase();
-    if (path.isEmpty) return false;
-    return extensions.any(path.endsWith);
-  }
+  ///   * `resourcePath` is EMPTY on every live content, because the file lives
+  ///     in `learningUnitResources` and the step only holds a pointer, so the
+  ///     extension check had nothing to look at;
+  ///   * the category lies. `graphics.headlineImage` holds Sample.pdf in
+  ///     teacher-corner-dev, so anything trusting the name drew a PDF through
+  ///     the image widget.
+  ///
+  /// The kind is decided from the RESOLVED value instead, once the pointer has
+  /// been followed. See [ResolvedResource] in
+  /// `lib/core/models/resource_kind.dart`.
 
   factory WorkflowContent.fromMap(
     Map<String, dynamic> data, {
@@ -81,7 +111,13 @@ class WorkflowContent {
     return WorkflowContent(
       contentName: SafeParse.asDisplayString(data['contentName']),
       contentCategory: SafeParse.asDisplayString(data['contentCategory']),
+      contentSubCategory: SafeParse.asDisplayString(
+        data['contentSubCategory'],
+      ),
       contentType: SafeParse.asDisplayString(data['contentType']),
+      additionalResourceType: SafeParse.asDisplayString(
+        data['additionalResourceType'],
+      ),
       resourcePath: SafeParse.asRefString(
         data['resourcePath'],
         collection: Workflow.collection,
@@ -235,13 +271,33 @@ class Workflow {
     return null;
   }
 
+  /// The field the steps actually live under.
+  ///
+  /// `workflowSteps` IS THE REAL NAME, and reading `steps` was a guess that
+  /// cost every activity its steps. Every workflow in `teacher-corner-dev`
+  /// carries `workflowSteps` (written by the web app's classroom stepper,
+  /// `createdSource: teacher-corner-classroom-stepper`), and the collection's
+  /// own `--schema--` document declares `workflowSteps` too. Nothing writes
+  /// `steps`. The symptom was not an error: `KeyedEntries.from(null)` yields
+  /// nothing, so every activity rendered the honest, and completely wrong,
+  /// "No steps yet".
+  ///
+  /// `steps` is still accepted, because this repo's own fixtures and seed use
+  /// it and there is no value in a rename that only churns tests. Live data
+  /// wins where a document somehow has both.
+  static const List<String> stepsFieldNames = ['workflowSteps', 'steps'];
+
   factory Workflow.fromMap(String workflowId, Map<String, dynamic> data) {
     final parsed = <WorkflowStep>[];
+    final field = stepsFieldNames.firstWhere(
+      (name) => data[name] != null,
+      orElse: () => stepsFieldNames.first,
+    );
     final entries = KeyedEntries.from(
-      data['steps'],
+      data[field],
       collection: collection,
       docId: workflowId,
-      field: 'steps',
+      field: field,
     );
     for (var i = 0; i < entries.length; i++) {
       parsed.add(

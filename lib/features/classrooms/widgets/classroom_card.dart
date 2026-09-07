@@ -5,11 +5,29 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/tc_chip.dart';
 import '../../../core/widgets/tc_icon_tile.dart';
 import '../classroom_list_item.dart';
 
-/// One classroom row: name, grade/section, institution, student count.
+/// One classroom row on the classrooms screen: name, school, programme count.
+///
+/// THREE LINES, EACH ONE FIELD. This is the screen a teacher comes to in order
+/// to FIND a classroom, and they arrive knowing either its name or its school.
+/// Giving those two a line each means both are scannable straight down the left
+/// edge, which a single concatenated subtitle never was.
+///
+/// WHAT THIS ROW DELIBERATELY NO LONGER SHOWS, since each was here once:
+///
+///   * The grade/section label. It duplicated the name for every classroom in
+///     this data, where "7 A" IS the name and "Grade 7 · A" said it again.
+///   * The student count. It is a property of the classroom rather than a way to
+///     recognise it, and it belongs on the classroom's own screen where it
+///     already appears.
+///   * The programme chips, and the single counted chip that briefly replaced
+///     them. A chip is an affordance and these were not tappable; as plain text
+///     the count sits in the same reading column as the school above it.
+///   * The STEM Club chip and its separate flask icon. Every row carries the
+///     same tile, so a STEM club reads as one more classroom in the list rather
+///     than as a different kind of object.
 class ClassroomCard extends StatelessWidget {
   const ClassroomCard({super.key, required this.classroom, this.onTap});
 
@@ -18,12 +36,8 @@ class ClassroomCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Grade/section and institution on one line, joined only when both exist,
-    // so a missing grade never leaves a dangling separator.
-    final subtitle = [
-      classroom.gradeSectionLabel,
-      classroom.institutionName,
-    ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
+    final school = classroom.institutionName?.trim() ?? '';
+    final programmeCount = classroom.distinctProgrammeCount;
 
     return Material(
       color: AppColors.white,
@@ -34,17 +48,13 @@ class ClassroomCard extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(AppDimensions.spacing12),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TcIconTile(
-                icon: classroom.isStemClub
-                    ? Icons.science_outlined
-                    : Icons.class_outlined,
-              ),
+              const TcIconTile(icon: Icons.home_rounded),
               SizedBox(width: AppDimensions.spacing12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       classroom.displayName,
@@ -52,47 +62,37 @@ class ClassroomCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.cardTitle,
                     ),
-                    if (subtitle.isNotEmpty) ...[
+                    if (school.isNotEmpty) ...[
                       SizedBox(height: 2.h),
                       Text(
-                        subtitle,
+                        school,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.caption,
                       ),
                     ],
-                    // Omitted entirely when unknown. "0 students" would be a
-                    // claim about the classroom; a missing count is a claim
-                    // about our read.
-                    if (classroom.studentCounter != null) ...[
+                    // Omitted at zero rather than reading "0 Programmes". A
+                    // classroom with no programme yet is a normal state early in
+                    // a term, and the row should say nothing about programmes
+                    // rather than say there are none.
+                    if (programmeCount > 0) ...[
                       SizedBox(height: 2.h),
                       Text(
-                        'classrooms.students_count'.tr(
-                          args: ['${classroom.studentCounter}'],
+                        (programmeCount == 1
+                                ? 'classrooms.programme_one'
+                                : 'classrooms.programme_many')
+                            .tr(args: ['$programmeCount']),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textTertiary,
                         ),
-                        style: AppTypography.tiny,
-                      ),
-                    ],
-                    if (classroom.isStemClub ||
-                        classroom.programmeLabels.isNotEmpty) ...[
-                      SizedBox(height: AppDimensions.spacing8),
-                      Wrap(
-                        spacing: AppDimensions.spacing8,
-                        runSpacing: AppDimensions.spacing4,
-                        children: [
-                          if (classroom.isStemClub)
-                            TcChip(
-                              label: 'classrooms.stem_club'.tr(),
-                              color: AppColors.ispfTeal,
-                            ),
-                          for (final label in classroom.programmeLabels)
-                            TcChip(label: label, color: AppColors.skyBlue),
-                        ],
                       ),
                     ],
                   ],
                 ),
               ),
+              SizedBox(width: AppDimensions.spacing8),
               Icon(
                 Icons.chevron_right_rounded,
                 size: 22.r,

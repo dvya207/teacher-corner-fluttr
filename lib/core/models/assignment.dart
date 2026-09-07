@@ -1,4 +1,5 @@
 import '../utils/safe_parse.dart';
+import 'form_question.dart';
 
 /// `Assignments/{docId}` — a quiz, an upload or a form a classroom can be set.
 ///
@@ -21,6 +22,8 @@ class Assignment {
     this.allowExitAndReEntry = false,
     this.totalMinutes = 0,
     this.questions = const [],
+    this.formQuestions = const [],
+    this.background,
     this.dueDate,
   });
 
@@ -48,8 +51,20 @@ class Assignment {
   /// The three duration fields folded into one number.
   final int totalMinutes;
 
+  /// FORM only, and read from `questions`. Empty for a quiz, which keeps its
+  /// own questions in [questions].
+  final List<FormQuestion> formQuestions;
+
   /// QUIZ only, and read from `questionsData`. See [fromMap].
   final List<QuizQuestion> questions;
+
+  /// The case-study preamble a quiz can carry, or null when it has none.
+  ///
+  /// PRESENT BUT EMPTY ON EVERY QUIZ IN THIS DATABASE — `{title: '',
+  /// description: '', images: []}` on all four. So the reading-material card is
+  /// built and simply not shown, rather than assumed absent: a quiz authored
+  /// with one renders it without further work.
+  final AssignmentBackground? background;
 
   /// Set by the PROGRAMME that allots the assignment, not by the assignment.
   final DateTime? dueDate;
@@ -136,8 +151,64 @@ class Assignment {
           minutes('totalDurationInHours') * 60 +
           minutes('totalDurationInMinutes'),
       questions: List.unmodifiable(questions),
+      formQuestions: FormQuestion.listFrom(
+        data[FormQuestion.field],
+        docId: docId,
+      ),
+      background: AssignmentBackground.fromMap(data['backgroundInfo']),
       dueDate: dueDate,
     );
+  }
+}
+
+/// The case-study preamble shown above a quiz's questions.
+class AssignmentBackground {
+  const AssignmentBackground({
+    required this.title,
+    required this.description,
+    this.documents = const [],
+  });
+
+  final String title;
+
+  /// HTML from a rich-text editor.
+  final String description;
+
+  /// Storage paths of the attached files.
+  ///
+  /// `images` IS MISNAMED IN PRODUCTION — it holds PDFs too, as the `type` on
+  /// each entry shows. The name is kept on the wire because renaming it would
+  /// break the join; it is called `documents` here because that is what it is.
+  final List<String> documents;
+
+  bool get isEmpty => title.trim().isEmpty && description.trim().isEmpty;
+
+  /// Null when the field is absent OR empty, so a caller can just null-check.
+  static AssignmentBackground? fromMap(dynamic raw) {
+    if (raw is! Map) return null;
+
+    final data = raw.map((k, v) => MapEntry(k.toString(), v));
+    final images = data['images'];
+    final documents = <String>[];
+
+    if (images is List) {
+      for (final entry in images) {
+        if (entry is Map) {
+          final path = SafeParse.asDisplayString(
+            entry['storagePath'] as Object?,
+          );
+          if (path != null && path.isNotEmpty) documents.add(path);
+        }
+      }
+    }
+
+    final background = AssignmentBackground(
+      title: SafeParse.asDisplayString(data['title']) ?? '',
+      description: SafeParse.asDisplayString(data['description']) ?? '',
+      documents: List.unmodifiable(documents),
+    );
+
+    return background.isEmpty && documents.isEmpty ? null : background;
   }
 }
 
@@ -245,6 +316,30 @@ class QuizQuestion {
 
   bool get isMcq => questionType.toUpperCase() == 'MCQ';
   bool get isText => questionType.toUpperCase() == 'TEXT';
+
+  /// A long-form written answer. NOT auto-marked, but very much answerable.
+  ///
+  /// DESCRIPTIVE carries `answer` and `maxCharLength`, the same fields as TEXT
+  /// and with a longer limit — 2000 against 400. The scorer gives it zero
+  /// because a person marks it afterwards, and treating "not auto-markable" as
+  /// "not answerable" is the mistake this getter exists to stop: the teacher
+  /// still has to be able to write the answer, and it is still stored on the
+  /// attempt for whoever marks it.
+  bool get isDescriptive => questionType.toUpperCase() == 'DESCRIPTIVE';
+
+  /// Whether the answer is free text, however it is marked afterwards.
+  bool get isWritten => isText || isDescriptive;
+
+  /// The character cap the author set, or the sensible default for the type.
+  ///
+  /// Production defaults 400 for TEXT and 2000 for DESCRIPTIVE, which is what
+  /// its two editors offer. Every TEXT question in this database omits the
+  /// field entirely, so the fallback is what will actually be used.
+  int get characterLimit {
+    if (maxCharLength > 0) return maxCharLength;
+
+    return isDescriptive ? 2000 : 400;
+  }
 
   bool get isBlanks {
     final type = questionType.toUpperCase();

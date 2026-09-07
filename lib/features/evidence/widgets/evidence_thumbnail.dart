@@ -4,7 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/services/storage_image_source.dart';
+import '../../../core/services/storage_file_source.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/widgets/tc_storage_image.dart';
@@ -28,7 +28,7 @@ class EvidenceThumbnail extends StatelessWidget {
   final File? file;
   final String? storagePath;
   final VoidCallback? onRemove;
-  final StorageImageSource? imageSource;
+  final StorageFileSource? imageSource;
 
   @override
   Widget build(BuildContext context) {

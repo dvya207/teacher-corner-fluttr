@@ -2,15 +2,14 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/tc_app_bar.dart';
 import '../../core/widgets/tc_empty_state.dart';
 import '../auth/auth_provider.dart';
-import '../../core/services/firestore_service.dart';
 import 'quiz_player_provider.dart';
-import 'quiz_player_screen.dart';
 import 'quizzes_provider.dart';
 
 /// Which chip is showing.
@@ -114,26 +113,30 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
       return;
     }
 
-    final firestore = context.read<FirestoreService>();
-
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ChangeNotifierProvider<QuizPlayerProvider>(
-          create: (_) => QuizPlayerProvider(
-            firestore: firestore,
-            assignment: entry.assignment,
-            teacherDocId: teacherDocId,
-            uid: uid,
-            classroomId: classroom.classroom.classroomId,
-            programmeId: entry.programmeId,
-          ),
-          child: const QuizPlayerScreen(),
-        ),
+    /*
+     * GoRouter, NOT Navigator.push.
+     *
+     * A raw MaterialPageRoute opened the player and closed it again within half
+     * a second: pushing onto the shell's navigator from inside a branch rebuilt
+     * the branch, discarded the pushed route and re-ran this screen's initState.
+     * No error was logged; the quiz simply refused to open and the list
+     * reloaded. Every other detail screen in this app is a nested GoRoute.
+     */
+    await context.push(
+      '/quizzes/play',
+      extra: QuizPlayTarget(
+        assignment: entry.assignment,
+        teacherDocId: teacherDocId,
+        uid: uid,
+        classroomId: classroom.classroom.classroomId,
+        programmeId: entry.programmeId,
       ),
     );
 
     if (!context.mounted) return;
 
+    // RELOAD ON RETURN: an attempt has moved attemptsCount, and a quiz whose
+    // allowance is now spent must not look untouched.
     await context.read<QuizzesProvider>().load(account);
   }
 
@@ -476,6 +479,9 @@ class _AssignmentRow extends StatelessWidget {
     );
   }
 
+  /// Only quizzes reach this list — see the filter in QuizzesProvider — so the
+  /// other types keep an icon purely so a row is never iconless if that ever
+  /// changes.
   static IconData _icon(String type) {
     switch (type.toUpperCase()) {
       case 'QUIZ':

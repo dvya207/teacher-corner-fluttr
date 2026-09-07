@@ -17,13 +17,30 @@ import '../../core/widgets/tc_section_label.dart';
 import '../../core/widgets/tc_status_message.dart';
 import '../auth/auth_provider.dart';
 import '../classrooms/classroom_list_item.dart';
-import '../classrooms/widgets/classroom_card.dart';
+import '../classrooms/school_list_item.dart';
 import 'dashboard_provider.dart';
 import 'greeting.dart';
+import 'widgets/dashboard_classroom_row.dart';
+import 'widgets/school_card.dart';
 
 /// The teacher's name, their institution, and how much they are carrying.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({super.key, this.now});
+
+  /// The moment the greeting is chosen for. Defaults to the real clock.
+  ///
+  /// INJECTED SO THE SCREEN IS PHOTOGRAPHABLE. `greetingKeyFor` was already a
+  /// pure function and already unit-tested at its boundaries, but the screen
+  /// still called `DateTime.now()` itself, which made three golden files
+  /// depend on the hour the machine that generated them happened to be in.
+  /// They passed all afternoon and failed from five o'clock, and the diff
+  /// blamed the greeting rather than whatever change was actually being
+  /// reviewed. A golden that expires is worse than no golden: it teaches
+  /// whoever hits it to regenerate without looking.
+  ///
+  /// Production passes nothing and reads the real clock, so this costs the app
+  /// nothing and buys the suite determinism.
+  final DateTime? now;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -60,7 +77,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           messageKey: dashboard.errorKey ?? 'dashboard.error_generic',
           onRetry: dashboard.retry,
         ),
-        DashboardStatus.loaded => _LoadedState(dashboard: dashboard),
+        DashboardStatus.loaded => _LoadedState(
+          dashboard: dashboard,
+          now: widget.now ?? DateTime.now(),
+        ),
       },
     );
   }
@@ -97,9 +117,13 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _LoadedState extends StatelessWidget {
-  const _LoadedState({required this.dashboard});
+  const _LoadedState({required this.dashboard, required this.now});
 
   final DashboardProvider dashboard;
+
+  /// Already resolved by the caller, so this widget never reads a clock and
+  /// two rebuilds a millisecond apart cannot disagree about the greeting.
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +158,7 @@ class _LoadedState extends StatelessWidget {
             // With no name known the greeting still reads correctly: the
             // placeholder takes the app's own name rather than rendering an
             // empty gap or the word "null".
-            title: greetingKeyFor(DateTime.now()).tr(
+            title: greetingKeyFor(now).tr(
               args: [firstName.isNotEmpty ? firstName : 'app.title'.tr()],
             ),
             // The institution, RIGHT-ALIGNED under the avatar. It was removed
@@ -147,24 +171,37 @@ class _LoadedState extends StatelessWidget {
             // beside a 64px logo, and the design shows it on one.
             titleFontSize: 20,
 
+            // THREE TILES, ALWAYS, in this order. The row is a fixed shape a
+            // teacher learns the positions of, so a tile that comes and goes
+            // moves the other two and makes the whole row unreadable at a
+            // glance. Anything not knowable says so in its own slot instead.
+            //
+            // TOTALS ACROSS EVERY SCHOOL, not just the one named above them.
+            // The hero answers "how much am I carrying", which is a question
+            // about the teacher rather than about a building, and a teacher at
+            // four schools carries all four. The per-school breakdown is the
+            // "My Schools" section further down, which is where a number
+            // attached to one name belongs.
             children: [
-              // Omitted when the total is not knowable, which happens when an
-              // authoritative classroom document did not load. A partial sum
-              // would understate the real figure while looking exact.
-              if (dashboard.studentTotal != null)
-                TcHeroStatTile(
-                  value: '${dashboard.studentTotal}',
-                  label: 'dashboard.stat_students'.tr(),
-                ),
               TcHeroStatTile(
                 value: '${account?.classroomCount ?? 0}',
-                label: 'dashboard.stat_classrooms'.tr(),
+                label: 'dashboard.stat_classes'.tr(),
+              ),
+              TcHeroStatTile(
+                // A dash, not a zero, when an authoritative classroom document
+                // did not load. A partial sum would understate the real figure
+                // while looking exact, and zero is a claim about the teacher's
+                // classes rather than about our read. Zero itself is still
+                // shown where it is a fact, which is the common case in this
+                // data: most classrooms carry no students yet.
+                value: dashboard.studentTotal?.toString() ?? '–',
+                label: 'dashboard.stat_students'.tr(),
               ),
               TcHeroStatTile(
                 // The PROVIDER's count, not the account's: it is computed from
-                // the same authoritative classroom documents the cards below
-                // draw their programme chips from, so the header and the chips
-                // agree. See DashboardProvider.programmeCount.
+                // the authoritative classroom documents rather than the
+                // teacher's denormalised copy, which in live data disagrees
+                // with them. See DashboardProvider.programmeCount.
                 value: '${dashboard.programmeCount}',
                 label: 'dashboard.stat_programmes'.tr(),
               ),
@@ -176,7 +213,14 @@ class _LoadedState extends StatelessWidget {
                     type: TcMsgType.info,
                     message: 'dashboard.not_linked'.tr(),
                   )
-                : _ClassroomShortcuts(classrooms: dashboard.classrooms),
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _ClassroomShortcuts(classrooms: dashboard.classrooms),
+                      _SchoolShortcuts(schools: dashboard.schools),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -212,29 +256,24 @@ class _ClassroomShortcuts extends StatelessWidget {
     }
 
     final shown = classrooms.take(_maxRows).toList();
-    final hasMore = classrooms.length > _maxRows;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
         TcSectionLabel(
-          'dashboard.your_classrooms'.tr(),
-          trailing: hasMore
-              ? GestureDetector(
-                  onTap: () => context.go('/classrooms'),
-                  child: Text(
-                    'dashboard.see_all'.tr(),
-                    style: AppTypography.label
-                        .copyWith(color: AppColors.skyBlue),
-                  ),
-                )
-              : null,
+          'dashboard.my_classrooms'.tr(),
+          // ALWAYS PRESENT, not only when rows are hidden. It used to appear
+          // once a fourth classroom existed, which made the header of this
+          // section change shape depending on data the teacher cannot see the
+          // count of. It is also the twin of the one on "My Schools", and one
+          // section having the affordance while the other does not reads as a
+          // bug rather than as a rule.
+          trailing: _SeeAll(onTap: () => context.go('/classrooms')),
         ),
         SizedBox(height: AppDimensions.spacing8),
         for (final classroom in shown) ...[
-          ClassroomCard(
-            // Reuses the list's own card, so a classroom looks the same
-            // wherever a teacher meets it.
+          DashboardClassroomRow(
             classroom: classroom,
             // `go`, not `push`: this lands inside the Classrooms branch of the
             // shell, so the bottom nav follows the teacher there.
@@ -243,6 +282,89 @@ class _ClassroomShortcuts extends StatelessWidget {
           SizedBox(height: AppDimensions.spacing12),
         ],
       ],
+    );
+  }
+}
+
+/// The schools behind the classrooms above, each with its share of them.
+///
+/// DERIVED FROM THE SAME ROWS, not read separately. See [SchoolListItem]. So
+/// this section costs no extra network and cannot be in a different load state
+/// from the classrooms it summarises.
+class _SchoolShortcuts extends StatelessWidget {
+  const _SchoolShortcuts({required this.schools});
+
+  final List<SchoolListItem> schools;
+
+  @override
+  Widget build(BuildContext context) {
+    // Nothing at all rather than an empty state. A teacher with no classrooms
+    // already has the classrooms empty state directly above this, and a second
+    // panel saying the same thing about schools is noise. A teacher WITH
+    // classrooms that name no school has a data problem this section cannot
+    // explain, and an empty box would not help them either.
+    if (schools.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(height: AppDimensions.spacing8),
+        TcSectionLabel(
+          'dashboard.my_schools'.tr(),
+          // Goes to the CLASSROOMS list, same as the section above it. There is
+          // no schools screen: a school in this app is a grouping of
+          // classrooms rather than a thing with a page of its own, so "see all"
+          // here means "see all of these classrooms", and the list it opens can
+          // be searched by school.
+          trailing: _SeeAll(onTap: () => context.go('/classrooms')),
+        ),
+        SizedBox(height: AppDimensions.spacing8),
+        for (final school in schools) ...[
+          SchoolCard(
+            school: school,
+            // Opens the classroom list with this school already typed into its
+            // search, which is the nearest thing to a school page and reuses a
+            // filter that already matches on institution. See
+            // ClassroomSearch.filter.
+            onTap: () => context.go(
+              Uri(
+                path: '/classrooms',
+                queryParameters: {'q': school.name},
+              ).toString(),
+            ),
+          ),
+          SizedBox(height: AppDimensions.spacing12),
+        ],
+      ],
+    );
+  }
+}
+
+/// The "See all" affordance both sections carry, so the two cannot drift apart
+/// in wording, colour or hit area.
+class _SeeAll extends StatelessWidget {
+  const _SeeAll({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      // Opaque, so the padding below is part of the tap target rather than a
+      // hole in the middle of it.
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppDimensions.spacing4,
+          vertical: AppDimensions.spacing4,
+        ),
+        child: Text(
+          'dashboard.see_all'.tr(),
+          style: AppTypography.label.copyWith(color: AppColors.skyBlue),
+        ),
+      ),
     );
   }
 }

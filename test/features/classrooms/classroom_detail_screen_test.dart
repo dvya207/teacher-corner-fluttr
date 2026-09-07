@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tc_starter/core/models/classroom.dart';
 import 'package:tc_starter/core/models/learning_unit.dart';
+import 'package:tc_starter/features/auth/auth_provider.dart';
 import 'package:tc_starter/features/classrooms/classroom_detail_provider.dart';
 import 'package:tc_starter/features/classrooms/classroom_detail_screen.dart';
 import 'package:tc_starter/features/classrooms/widgets/activity_card.dart';
@@ -68,6 +69,10 @@ Future<void> pumpDetail(
       settle: settle,
       surfaceSize: surfaceSize,
       providers: [
+        // The screen reads the uid to fetch progress. Stubbed rather than
+        // omitted, because a screen that silently tolerates no auth would also
+        // silently stop showing progress in the real app.
+        ChangeNotifierProvider<AuthProvider>(create: (_) => StubAuthProvider()),
         ChangeNotifierProvider<ClassroomDetailProvider>(
           create: (_) => ClassroomDetailProvider(
             firestore: firestore,
@@ -239,6 +244,9 @@ void main() {
         tester,
         textScaler: const TextScaler.linear(3.0),
         providers: [
+          ChangeNotifierProvider<AuthProvider>(
+            create: (_) => StubAuthProvider(),
+          ),
           ChangeNotifierProvider<ClassroomDetailProvider>(
             create: (_) => ClassroomDetailProvider(
               firestore: FakeFirestoreService(

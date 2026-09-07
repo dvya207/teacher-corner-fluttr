@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -67,10 +66,15 @@ class ProfileScreen extends StatelessWidget {
                   _languageCard(context),
                   SizedBox(height: AppDimensions.spacing16),
                   _helpCard(context),
-                  if (kDebugMode && auth.uid != null) ...[
-                    SizedBox(height: AppDimensions.spacing16),
-                    _uidCard(auth.uid!),
-                  ],
+                  // NO AUTH UID HERE. There was a debug card printing
+                  // `auth.uid` under kDebugMode, because the uid is what
+                  // `tools/seed.js --uid=` wants and fetching it from the
+                  // Console each time is friction. kDebugMode was the wrong
+                  // guard: every build a teacher is handed to try is a debug
+                  // build, so it showed a 28-character account identifier on
+                  // the profile screen of the app they were reviewing. Read the
+                  // uid from the Firebase Console or from a seed script's own
+                  // output instead.
                   SizedBox(height: AppDimensions.spacing24),
                   TcButton(
                     label: 'auth.sign_out'.tr(),
@@ -434,21 +438,6 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const Icon(Icons.chevron_right, color: AppColors.textTertiary),
-        ],
-      ),
-    );
-  }
-
-  /// Debug only. The uid is what `tools/seed.js --uid=` wants, and hunting for
-  /// it in the Console every time is friction. Not a teacher's business.
-  Widget _uidCard(String uid) {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('profile.uid_label'.tr(), style: AppTypography.label),
-          SizedBox(height: AppDimensions.spacing4),
-          SelectableText(uid, style: AppTypography.bodySmall),
         ],
       ),
     );

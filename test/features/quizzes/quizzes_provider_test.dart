@@ -199,4 +199,62 @@ void main() {
       expect(provider.status, QuizzesStatus.empty);
     },
   );
+
+  test('UPLOAD and FORM assignments are left out entirely', () async {
+    // They are set on a classroom exactly like a quiz, and this app can answer
+    // neither. Listing them greyed out only pushed the answerable ones down.
+    final provider = QuizzesProvider(
+      firestore: FakeFirestoreService(
+        classrooms: [
+          classroom('c1', '8 D', ['p1']),
+        ],
+        programmes: [
+          programme('p1', {
+            'quiz': {'assignmentId': 'quiz', 'assignmentDueDate': null},
+            'up': {'assignmentId': 'up', 'assignmentDueDate': null},
+            'form': {'assignmentId': 'form', 'assignmentDueDate': null},
+          }),
+        ],
+        assignments: [
+          assignment('quiz'),
+          assignment('up', type: 'UPLOAD'),
+          assignment('form', type: 'FORM'),
+        ],
+      ),
+    );
+
+    await provider.load(accountWith(['c1']));
+
+    expect(
+      provider.rows.single.assignments.map((row) => row.assignment.docId),
+      ['quiz'],
+    );
+    expect(provider.assignmentCount, 1, reason: 'the count must agree');
+  });
+
+  test(
+    'a classroom with ONLY an upload reads as empty, not as one row',
+    () async {
+      // The reason the filter lives in the provider: the chip count and the
+      // "no assignments" state have to agree with what is rendered.
+      final provider = QuizzesProvider(
+        firestore: FakeFirestoreService(
+          classrooms: [
+            classroom('c1', '8 D', ['p1']),
+          ],
+          programmes: [
+            programme('p1', {
+              'up': {'assignmentId': 'up', 'assignmentDueDate': null},
+            }),
+          ],
+          assignments: [assignment('up', type: 'UPLOAD')],
+        ),
+      );
+
+      await provider.load(accountWith(['c1']));
+
+      expect(provider.rows.single.isEmpty, isTrue);
+      expect(provider.assignmentCount, 0);
+    },
+  );
 }

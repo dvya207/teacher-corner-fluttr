@@ -511,3 +511,131 @@ whether it exists under that exact name, how my primary key relates to their
 document id, and whether their rules already permit me. Six of those seven
 questions have answers that fail silently if I guess wrong, and I only learned
 that by nearly guessing.
+
+## Rendering the content in the app, and what the data made me change my mind about
+
+The step content used to be handed to the phone: every guide, video and reel was
+a card reading "Opens in another app" with an Open button. I wrote a comment
+defending that, and the defence was about my dependencies rather than about the
+teacher. They are mid-lesson with 32 children waiting, and an activity guide
+that opens in Chrome is a trip out of the app they have to find their way back
+from inside a ten-minute step. The reference app plays the video in the tab.
+Four viewers now: YouTube, mp4, PDF, and a webview for the two formats Android
+cannot render.
+
+**The slot name lies about the file type, and that is what broke the old
+renderer.** I had assumed `contentCategory` said what kind of thing a content
+was, and `WorkflowContent.isImage` was built on that assumption. One live
+document in `teacher-corner-dev` disproves it four times over:
+
+    graphics.headlineImage  = learningUnits/cv1l…/Sample.pdf     a PDF
+    graphics.3DConversion   = learningUnits/cv1l…/Sample.pdf     a PDF
+    graphics.tacGuidePrint  = learningUnits/cv1l…/ChatGPT….png   an image
+    graphics.label18Sticker = KeFtaorAkEj6uaB8ywdt               neither
+
+So `headlineImage` went through the image widget and drew a broken-image icon
+over a perfectly good PDF. The kind is now read off the resolved VALUE, its
+extension or its host, and never off the slot: that is the whole of
+`lib/core/models/resource_kind.dart`, and the reason its tests are all real
+strings copied out of the database rather than invented ones.
+
+**A slot can hold a reference instead of a file.** `graphics.label18Sticker`
+holds what looks like a document id. There is nothing to fetch and no viewer
+that would help, so it has a named kind of its own and says so on screen. What
+it must not do is what it did while I was building this: get handed to Storage
+and spin until an object-not-found comes back.
+
+**Every YouTube link here was pasted from a browser** and still carries what the
+browser put there: `watch?v=lY2yjAdbvdQ&list=RDlY2yjAdbvdQ&start_radio=1`. The
+id comes out of the named query parameter and gets length- and
+character-checked, because a wrong id does not fail loudly. The player mounts,
+goes black, and reports nothing, which is the least useful failure available to
+a teacher standing in front of a class.
+
+### Still unverified here
+
+None of the four viewers has been in front of a real device yet, and three of
+them are platform views that a widget test cannot exercise: `flutter_pdfview`
+wraps native AndroidPdfViewer, and both the YouTube player and the document
+viewer are webviews. The tests assert that the right viewer is chosen and that
+the right bytes are asked for. Whether a 40MB reel plays acceptably on a
+low-end phone on school wifi is a question only the phone can answer.
+
+### One thing I found and did not fix
+
+`FirestoreService.fetchLearningUnitResources` queries `learningUnitResources`
+with `.limit(1)`. That is correct against this database, where I checked: 4
+documents, one per learning unit. It will be wrong in production. The web app's
+`LearningUnitResourceService` writes **one resource document per maturity rung**
+— its own comment says "a unit has one resource document per rung" — so a
+production unit expanded across the maturity ladder has several, and `limit(1)`
+would take whichever came back first and silently hide the rest. The fix is to
+merge the rungs rather than pick one, and it needs a decision about precedence
+when two rungs fill the same slot, which is why it is written down here instead
+of guessed at.
+
+## The Submissions report, and the one thing it cannot show
+
+The Reports tab was a "not built yet" stub. It now has a hub with the
+reference app's four cards, of which Submissions is real:
+
+    Reports  ->  Submissions  ->  classroom  ->  "Choose a programme"
+             ->  activities, each with a person row  ->  the record
+
+**THREE DOCUMENTS ONLY MEAN SOMETHING TOGETHER, which is why there is a parser
+rather than a model constructor.** The answers are in
+`users/{uid}/formResponses/{classroomId}-{assignmentId}`, the photos and the
+quiz attempt are in `users/{uid}/submissions/{classroomId}-{programmeId}`, and
+the QUESTION TEXT is on the assignment. Without the third, a teacher's own
+record reads:
+
+    1: very easy
+    2: mostly appropriate
+
+**FOUR ANSWER SHAPES, ALL OF THEM IN ONE LIVE DOCUMENT.** This is the reason
+`SubmissionAnswer.answer` is a string by the time a widget sees it:
+
+    "1": ["very easy"]          a single choice, in a list
+    "2": ["yes", "partially"]   several choices
+    "5": "nothing"              free text
+    "6": 3                      a number
+
+**THE WORKFLOW SAYS WHAT COULD BE SUBMITTED; the stored documents say what was.**
+An activity a teacher never opened has no submission document at all, so the
+only way to list it as "Not submitted" rather than to omit it is to read the
+workflow that declares its assignments. That split is the whole design of
+`ActivitySubmissionsProvider`.
+
+**A QUIZ ATTEMPT IS THE DOCUMENT'S OWN TOP LEVEL**, not nested under an
+assignment id the way the uploads are, so the provider checks that the document
+NAMES this assignment before showing a score against it. Without that check
+every activity in the programme reports the same quiz result.
+
+### What it cannot show, and why
+
+Other teachers. The reference screenshots list several names per activity
+(Siddveer Swamy, Santosh Kanta, Santosh Test) and this cannot:
+
+    match /users/{uid}/{document=**} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+That is the DEPLOYED rule, checked against the live ruleset rather than the
+repo copy. This app writes submissions under `users/{uid}/`, so the only
+record readable here is the signed-in teacher's own. The production app manages
+it because it keeps submissions in a TOP-LEVEL `Submissions` collection —
+`apps/teacher-corner-android/lib/core/services/firestore_service.dart` writes
+`Submissions/{classroomId}_{studentId}_{luId}_{programmeId}` — and that
+collection does not exist in teacher-corner-dev at all.
+
+Showing other teachers would therefore need both a new shared collection AND a
+rules deploy from the web app's repo, which is not this one's to make. So the
+screen says so, in words, above the list: a report showing one name looks like
+a classroom with one teacher rather than like a report that can only see one.
+
+### The auth uid card
+
+Removed from the profile screen. It was already guarded by `kDebugMode`, and
+that was the wrong guard: every build a teacher is handed to try is a debug
+build, so a 28-character account identifier sat on the profile screen of the
+app they were reviewing.

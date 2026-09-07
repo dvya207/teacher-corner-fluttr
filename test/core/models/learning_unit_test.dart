@@ -161,4 +161,38 @@ void main() {
       expect(lu.shortDescription, isNull);
     });
   });
+
+  group('which field the preview image comes from', () {
+    // Both fields exist on a live document and only one is filled. Reading the
+    // empty one left every activity card pictureless with no way to tell that
+    // from an activity that genuinely has no image.
+    test('prefers learningUnitImage, which the web app fills', () {
+      final lu = LearningUnit.fromMap('lu1', {
+        'learningUnitImage': 'learningUnits/lu1/learningUnitImage.jpg',
+        'learningUnitPreviewImage': '',
+      });
+      expect(lu.previewImagePath, 'learningUnits/lu1/learningUnitImage.jpg');
+    });
+
+    test('falls back to learningUnitPreviewImage when it is the filled one', () {
+      final lu = LearningUnit.fromMap('lu1', {
+        'learningUnitImage': '',
+        'learningUnitPreviewImage': 'learningUnits/lu1/preview.jpg',
+      });
+      expect(lu.previewImagePath, 'learningUnits/lu1/preview.jpg');
+    });
+
+    test('two empty fields mean no image, not an empty path', () {
+      final lu = LearningUnit.fromMap('lu1', {
+        'learningUnitImage': '',
+        'learningUnitPreviewImage': '',
+      });
+      // Null, so the card omits the picture rather than asking Storage for "".
+      expect(lu.previewImagePath, isNull);
+    });
+
+    test('neither field present is also no image', () {
+      expect(LearningUnit.fromMap('lu1', {}).previewImagePath, isNull);
+    });
+  });
 }

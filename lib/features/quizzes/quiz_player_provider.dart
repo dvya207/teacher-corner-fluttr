@@ -68,6 +68,10 @@ class QuizPlayerProvider extends ChangeNotifier {
   bool get hasNext => _at < questions.length - 1;
   int get answeredCount => _answers.where((a) => a.isAnswered).length;
 
+  /// Whether question [at] has been answered, for the numbered pills.
+  bool isAnswered(int at) =>
+      at >= 0 && at < _answers.length && _answers[at].isAnswered;
+
   /// The score AS IT STANDS, for the result screen. Computed rather than stored,
   /// so it cannot disagree with what was written.
   AttemptMarks get marks => attemptMarks(questions, _answers);
@@ -158,4 +162,26 @@ class QuizPlayerProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+}
+
+/// Everything the player route needs, handed over through GoRouter's `extra`.
+///
+/// A PARSED ASSIGNMENT RATHER THAN AN ID. The list already read and parsed it,
+/// and the classroom and programme it was allotted by are properties of the ROW
+/// rather than of the assignment, so an id in the path could not express them
+/// without three more reads.
+class QuizPlayTarget {
+  const QuizPlayTarget({
+    required this.assignment,
+    required this.teacherDocId,
+    required this.uid,
+    required this.classroomId,
+    required this.programmeId,
+  });
+
+  final Assignment assignment;
+  final String teacherDocId;
+  final String uid;
+  final String classroomId;
+  final String programmeId;
 }

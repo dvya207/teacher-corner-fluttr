@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../services/storage_image_source.dart';
+import '../services/storage_file_source.dart';
 import '../theme/app_colors.dart';
 
 /// Renders an image identified by a Cloud Storage PATH rather than a URL.
@@ -39,7 +39,7 @@ class TcStorageImage extends StatefulWidget {
   final BorderRadius? borderRadius;
 
   /// Injected by tests. Production uses the shared Firebase-backed source.
-  final StorageImageSource? source;
+  final StorageFileSource? source;
 
   @override
   State<TcStorageImage> createState() => _TcStorageImageState();
@@ -48,8 +48,8 @@ class TcStorageImage extends StatefulWidget {
 class _TcStorageImageState extends State<TcStorageImage> {
   Future<_Resolved?>? _future;
 
-  StorageImageSource get _source =>
-      widget.source ?? FirebaseStorageImageSource.instance;
+  StorageFileSource get _source =>
+      widget.source ?? FirebaseStorageFileSource.instance;
 
   @override
   void initState() {
