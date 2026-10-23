@@ -5,6 +5,8 @@
 ![Android](https://img.shields.io/badge/Android-ready-3DDC84?logo=android)
 ![CI](https://github.com/dvya207/teacher-corner-fluttr/actions/workflows/release.yml/badge.svg)
 
+Developed by Divya Jain.
+
 A simple Flutter app for the Teacher Corner workflow, built for classroom and teacher use.
 It includes the core UI, localization, Firebase integration, and feature screens for
 learning content, evidence, and reporting.
@@ -17,6 +19,14 @@ learning content, evidence, and reporting.
 - Firebase-backed data access
 - Multi-language support
 - Android app setup with Flutter
+
+## App screenshot
+
+```text
+[ Add a screenshot here ]
+```
+
+You can replace this placeholder with a real app image or a markdown image link.
 
 ## Getting started
 
@@ -65,16 +75,3 @@ test/
 ## License
 
 This project is for educational and internal app development use.
-
-
-**2. `ScreenUtilInit` sits above `MaterialApp`.** Every `.sp`/`.w`/`.h`/`.r` is
-evaluated after it initialises. That is also why the tokens in
-`app_dimensions.dart` and `app_typography.dart` are **getters, not constants** -
-a `static const` using `.sp` throws a `LateInitializationError`. If you add a
-token, make it a getter.
-
-### Style
-
-Read `analysis_options.yaml`. Keep `flutter analyze` at zero issues, not
-"mostly clean". Write the comment that explains *why*, not *what*: the code
-already says what it does.
