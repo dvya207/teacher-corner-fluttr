@@ -22,7 +22,7 @@ learning content, evidence, and reporting.
 
 ## App screenshot
 
-![Teacher Corner app screenshot](assets/screenshots/Screenshot_20260928-161541.png)
+![Teacher Corner app screenshot](assets/screenshots/teacher-corner-login.jpeg)
 
 ## Getting started
 
