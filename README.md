@@ -68,6 +68,7 @@ test/
 
 This project is for educational and internal app development use.
 
-<p align="center">
-  Developed by Divya Jain
+<p align="left">
+  Developed by<br>
+  Divya Jain
 </p>
