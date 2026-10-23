@@ -7,8 +7,6 @@
   <img src="https://github.com/dvya207/teacher-corner-fluttr/actions/workflows/release.yml/badge.svg" alt="CI" />
 </p>
 
-Developed by Divya Jain.
-
 A simple Flutter app for the Teacher Corner workflow, built for classroom and teacher use.
 It includes the core UI, localization, Firebase integration, and feature screens for
 learning content, evidence, and reporting.
@@ -69,3 +67,7 @@ test/
 ## License
 
 This project is for educational and internal app development use.
+
+<p align="center">
+  Developed by Divya Jain
+</p>
