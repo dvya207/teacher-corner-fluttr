@@ -22,11 +22,7 @@ learning content, evidence, and reporting.
 
 ## App screenshot
 
-```text
-[ Add a screenshot here ]
-```
-
-You can replace this placeholder with a real app image or a markdown image link.
+![Teacher Corner app screenshot](assets/screenshots/Screenshot_20260928-161541.png)
 
 ## Getting started
 
