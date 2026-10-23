@@ -20,12 +20,6 @@ learning content, evidence, and reporting.
 - Multi-language support
 - Android app setup with Flutter
 
-## App screenshots
-
-![Teacher Corner login screen](screenshots/01-login-screen.jpeg)
-![Teacher Corner dashboard screen](screenshots/02-dashboard-screen.jpeg)
-![Teacher Corner submissions screen](screenshots/03-submissions-screen.jpeg)
-
 ## Getting started
 
 ### Prerequisites
