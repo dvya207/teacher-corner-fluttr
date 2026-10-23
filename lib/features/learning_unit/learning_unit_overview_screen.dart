@@ -166,10 +166,10 @@ class _Loaded extends StatelessWidget {
         'classroom.steps_count'.tr(args: ['${steps.length}']),
     ].whereType<String>().where((s) => s.trim().isNotEmpty).join(' · ');
 
-    final description =
-        (unit.longDescription?.trim().isNotEmpty ?? false)
-        ? unit.longDescription!.trim()
-        : unit.shortDescription?.trim();
+    // WHICHEVER FIELD HAS ONE, longest first. See LearningUnit.description:
+    // live units carry five description fields and this screen used to read
+    // two of them.
+    final description = unit.description;
 
     return SingleChildScrollView(
       child: Column(

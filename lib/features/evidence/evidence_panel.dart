@@ -11,6 +11,7 @@ import '../../core/widgets/tc_button.dart';
 import '../../core/widgets/tc_empty_state.dart';
 import '../../core/widgets/tc_gradient_button.dart';
 import '../../core/widgets/tc_loading.dart';
+import '../../core/widgets/tc_photo_viewer.dart';
 import '../../core/widgets/tc_section_label.dart';
 import '../../core/widgets/tc_status_message.dart';
 import 'evidence_provider.dart';
@@ -209,6 +210,16 @@ class _EvidencePanelState extends State<EvidencePanel> {
                 for (var i = 0; i < provider.pending.length; i++)
                   EvidenceThumbnail(
                     file: provider.pending[i].file,
+                    // THE WHOLE SET, not just this one. A teacher checking
+                    // three photos before submitting should swipe between
+                    // them rather than close and reopen each.
+                    onOpen: () => showTcPhotoViewer(
+                      context,
+                      photos: [
+                        for (final p in provider.pending) TcPhoto.file(p.file),
+                      ],
+                      initialIndex: i,
+                    ),
                     onRemove:
                         provider.isBusy ? null : () => provider.removePending(i),
                   ),
@@ -233,6 +244,14 @@ class _EvidencePanelState extends State<EvidencePanel> {
                 for (var i = 0; i < provider.submitted.length; i++)
                   EvidenceThumbnail(
                     storagePath: provider.submitted[i].storagePath,
+                    onOpen: () => showTcPhotoViewer(
+                      context,
+                      photos: [
+                        for (final p in provider.submitted)
+                          TcPhoto.storage(p.storagePath),
+                      ],
+                      initialIndex: i,
+                    ),
                     onRemove: provider.isBusy
                         ? null
                         : () => provider.removeSubmitted(i),

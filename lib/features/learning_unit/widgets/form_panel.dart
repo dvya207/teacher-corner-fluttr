@@ -376,32 +376,42 @@ class _MultiChoices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final option in options)
-          CheckboxListTile(
-            value: selected.contains(option),
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            controlAffinity: ListTileControlAffinity.leading,
-            title: Text(option, style: AppTypography.bodyMedium),
-            onChanged: (on) {
-              final picked = {...selected};
-              if (on ?? false) {
-                picked.add(option);
-              } else {
-                picked.remove(option);
-              }
-              // REBUILT IN THE QUESTION'S OWN ORDER, not tick order, so the same
-              // set of boxes always stores the same list.
-              onChanged([
-                for (final o in options)
-                  if (picked.contains(o)) o,
-              ]);
-            },
-          ),
-      ],
+    return Material(
+      // A MATERIAL AROUND THE TILES, and it is not decoration. A ListTile
+      // paints its ink splash on the nearest Material ancestor, and the
+      // nearest one here is above the question card's own DecoratedBox, so the
+      // splash was painting BEHIND that white background and was invisible.
+      // Flutter 3.47 turned that into an assertion, which is how it surfaced.
+      // Transparency rather than a colour: the card already provides the
+      // white, this only provides somewhere for the ink to go.
+      type: MaterialType.transparency,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final option in options)
+            CheckboxListTile(
+              value: selected.contains(option),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(option, style: AppTypography.bodyMedium),
+              onChanged: (on) {
+                final picked = {...selected};
+                if (on ?? false) {
+                  picked.add(option);
+                } else {
+                  picked.remove(option);
+                }
+                // REBUILT IN THE QUESTION'S OWN ORDER, not tick order, so the
+                // same set of boxes always stores the same list.
+                onChanged([
+                  for (final o in options)
+                    if (picked.contains(o)) o,
+                ]);
+              },
+            ),
+        ],
+      ),
     );
   }
 }
@@ -423,17 +433,27 @@ class _Choices extends StatelessWidget {
     return RadioGroup<String>(
       groupValue: selected.isEmpty ? null : selected,
       onChanged: (v) => onChanged(v ?? ''),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final option in options)
-            RadioListTile<String>(
-              value: option,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: Text(option, style: AppTypography.bodyMedium),
-            ),
-        ],
+      child: Material(
+      // A MATERIAL AROUND THE TILES, and it is not decoration. A ListTile
+      // paints its ink splash on the nearest Material ancestor, and the
+      // nearest one here is above the question card's own DecoratedBox, so the
+      // splash was painting BEHIND that white background and was invisible.
+      // Flutter 3.47 turned that into an assertion, which is how it surfaced.
+      // Transparency rather than a colour: the card already provides the
+      // white, this only provides somewhere for the ink to go.
+        type: MaterialType.transparency,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final option in options)
+              RadioListTile<String>(
+                value: option,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Text(option, style: AppTypography.bodyMedium),
+              ),
+          ],
+        ),
       ),
     );
   }

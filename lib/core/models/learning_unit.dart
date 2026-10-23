@@ -13,6 +13,9 @@ class LearningUnit {
     this.type,
     this.shortDescription,
     this.longDescription,
+    this.alternateLongDescription,
+    this.alternateShortDescription,
+    this.tinyDescription,
     this.stepCount,
     this.learningUnitCode,
     this.subjectCode,
@@ -32,6 +35,40 @@ class LearningUnit {
   final String? type;
   final String? shortDescription;
   final String? longDescription;
+
+  /// THREE MORE DESCRIPTION FIELDS, and they were being dropped. Every unit in
+  /// teacher-corner-dev that has a description has all five of these filled,
+  /// with different text in each; the model read two and ignored the rest, so a
+  /// unit whose author had only filled an alternate or the tiny one showed no
+  /// description at all.
+  final String? alternateLongDescription;
+  final String? alternateShortDescription;
+  final String? tinyDescription;
+
+  /// The description to SHOW, from whichever field has one.
+  ///
+  /// LONGEST FIRST, then progressively shorter, because this is read on a
+  /// screen a teacher opens BEFORE running the activity: they are deciding
+  /// whether they understand it well enough to teach it, and more detail is
+  /// better. The tiny one is a last resort rather than a preference.
+  ///
+  /// ONE GETTER RATHER THAN A CHAIN AT EACH CALL SITE, because there were two
+  /// call sites and they disagreed: the overview screen preferred the long
+  /// description and the step screen's About block preferred the short one, so
+  /// the same unit read differently on two screens one tap apart.
+  String? get description {
+    for (final candidate in [
+      longDescription,
+      shortDescription,
+      alternateLongDescription,
+      alternateShortDescription,
+      tinyDescription,
+    ]) {
+      final trimmed = candidate?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    }
+    return null;
+  }
   final int? stepCount;
 
   /// `[A-Z]{2}[0-9]{2}`, e.g. `BO07`. The ONLY reliable categorisation field.
@@ -227,6 +264,13 @@ class LearningUnit {
       type: SafeParse.asDisplayString(data['type']),
       shortDescription: SafeParse.asDisplayString(data['shortDescription']),
       longDescription: SafeParse.asDisplayString(data['longDescription']),
+      alternateLongDescription: SafeParse.asDisplayString(
+        data['alternateLongDescription'],
+      ),
+      alternateShortDescription: SafeParse.asDisplayString(
+        data['alternateShortDescription'],
+      ),
+      tinyDescription: SafeParse.asDisplayString(data['tinyDescription']),
       stepCount: SafeParse.asIntOrNull(
         data['stepCount'],
         collection: collection,

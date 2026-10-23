@@ -7,6 +7,7 @@ import '../../../core/services/storage_file_source.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimensions.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/tc_photo_viewer.dart';
 import '../../../core/widgets/tc_storage_image.dart';
 
 /// Opens the record of everything the teacher submitted against one activity.
@@ -300,19 +301,22 @@ class _Photos extends StatelessWidget {
           spacing: AppDimensions.spacing12,
           runSpacing: AppDimensions.spacing12,
           children: [
-            for (final path in paths)
-              // STORAGE PATHS, resolved through the shared cache-on-path
-              // source. A stored download URL carries a token that expires,
-              // which is why the path is what the record keeps.
-              TcStorageImage(
-                storagePath: path,
-                width: 96.r,
-                height: 96.r,
-                fit: BoxFit.cover,
-                source: source,
-                borderRadius: BorderRadius.circular(
-                  AppDimensions.radiusInput,
+            for (final (i, path) in paths.indexed)
+              // TAPPABLE, and the grid is why. A 96dp thumbnail of a
+              // classroom bench tells a teacher a photo exists and nothing
+              // about whether the apparatus worked, which is the only reason
+              // they opened their own record. The whole set is handed to the
+              // viewer, not just this one, so they can swipe the lesson's
+              // photos rather than closing and reopening each.
+              _Thumbnail(
+                path: path,
+                onOpen: () => showTcPhotoViewer(
+                  context,
+                  photos: [for (final p in paths) TcPhoto.storage(p)],
+                  initialIndex: i,
+                  source: source,
                 ),
+                source: source,
               ),
           ],
         ),
@@ -357,6 +361,57 @@ class _Quiz extends StatelessWidget {
           style: AppTypography.caption,
         ),
       ],
+    );
+  }
+}
+
+/// One submitted photo: the image, and the glyph saying it opens.
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({
+    required this.path,
+    required this.onOpen,
+    required this.source,
+  });
+
+  final String path;
+  final VoidCallback onOpen;
+  final StorageFileSource? source;
+
+  @override
+  Widget build(BuildContext context) {
+    final side = 96.r;
+    final radius = BorderRadius.circular(AppDimensions.radiusInput);
+
+    return SizedBox(
+      width: side,
+      height: side,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // STORAGE PATHS, resolved through the shared cache-on-path source.
+          // A stored download URL carries a token that expires, which is why
+          // the path is what the record keeps.
+          TcStorageImage(
+            storagePath: path,
+            fit: BoxFit.cover,
+            source: source,
+            borderRadius: radius,
+          ),
+          Positioned(right: 4.r, bottom: 4.r, child: const TcExpandBadge()),
+          // THE TAP TARGET LAST, so it sits above the image and the badge and
+          // the whole square is tappable rather than only the glyph.
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onOpen,
+                borderRadius: radius,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

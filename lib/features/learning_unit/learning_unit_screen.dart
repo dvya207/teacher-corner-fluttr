@@ -534,7 +534,10 @@ class _About extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unit = provider.unit!;
-    final description = unit.shortDescription ?? unit.longDescription;
+    // THE SAME GETTER THE OVERVIEW USES. This read `shortDescription ??
+    // longDescription`, the opposite preference, so one unit described itself
+    // differently on two screens a single tap apart.
+    final description = unit.description;
     if (description == null || description.trim().isEmpty) {
       return const SizedBox.shrink();
     }

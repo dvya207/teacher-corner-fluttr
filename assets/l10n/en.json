@@ -11,7 +11,8 @@
     "empty": "Nothing here yet",
     "not_built_title": "Not part of this build yet",
     "not_built_subtitle": "This section exists in the full Teacher Corner app. It is outside the slice being rebuilt here.",
-    "back": "Back"
+    "back": "Back",
+    "close": "Close"
   },
   "nav": {
     "dashboard": "Home",
@@ -204,7 +205,9 @@
     "error_remove_failed": "Could not remove that photo. Try again.",
     "error_load": "Could not load what you have already submitted.",
     "submitted_of": "{} of {} submitted",
-    "format_limits": "JPG or PNG · up to {} MB each · {} photos max"
+    "format_limits": "JPG or PNG · up to {} MB each · {} photos max",
+    "photo_of": "Photo {} of {}",
+    "photo_unavailable": "This photo could not be loaded."
   },
   "startup": {
     "error_title": "Teacher Corner could not start",

@@ -2,10 +2,13 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimensions.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/widgets/tc_app_bar.dart';
 import '../../core/widgets/tc_empty_state.dart';
 import '../auth/auth_provider.dart';
@@ -181,7 +184,7 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           itemCount: provider.rows.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          separatorBuilder: (context, index) => SizedBox(height: AppDimensions.spacing12),
           itemBuilder: (context, at) {
             final row = provider.rows[at];
             final id = row.classroom.classroomId;
@@ -227,14 +230,14 @@ class _Chips extends StatelessWidget {
             selected: tab == QuizzesTab.classrooms,
             onTap: () => onChanged(QuizzesTab.classrooms),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: AppDimensions.spacing8),
           _Chip(
             label: 'quizzes.tab_contests'.tr(),
             count: null,
             selected: tab == QuizzesTab.contests,
             onTap: () => onChanged(QuizzesTab.contests),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: AppDimensions.spacing8),
           _Chip(
             label: 'quizzes.tab_events'.tr(),
             count: null,
@@ -267,12 +270,12 @@ class _Chip extends StatelessWidget {
       button: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusButton),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: AppDimensions.spacing16, vertical: AppDimensions.spacing8),
           decoration: BoxDecoration(
-            color: selected ? AppColors.skyBlue : Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            color: selected ? AppColors.skyBlue : AppColors.white,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusButton),
             border: Border.all(
               color: selected ? AppColors.skyBlue : AppColors.borderLight,
             ),
@@ -282,13 +285,12 @@ class _Chip extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  color: selected ? Colors.white : AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
+                style: AppTypography.bodyStrong.copyWith(
+                  color: selected ? AppColors.white : AppColors.textPrimary,
                 ),
               ),
               if (count != null) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: AppDimensions.spacing8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 7,
@@ -296,16 +298,15 @@ class _Chip extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: selected
-                        ? Colors.white.withValues(alpha: 0.25)
+                        ? AppColors.white.withValues(alpha: 0.25)
                         : AppColors.bg,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusInput),
                   ),
                   child: Text(
                     '$count',
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: AppTypography.tiny.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: selected ? Colors.white : AppColors.textSecondary,
+                      color: selected ? AppColors.white : AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -335,8 +336,8 @@ class _ClassroomCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Column(
@@ -344,37 +345,34 @@ class _ClassroomCard extends StatelessWidget {
         children: [
           InkWell(
             onTap: onToggle,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(AppDimensions.spacing16),
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 40.r,
+                    height: 40.r,
                     decoration: BoxDecoration(
                       color: AppColors.bg,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusInput),
                     ),
-                    child: const Icon(Icons.school_outlined, size: 20),
+                    child: Icon(Icons.school_outlined, size: 20.r),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: AppDimensions.spacing12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           row.classroom.displayName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
+                          style: AppTypography.cardTitle,
                         ),
                         if (row.subtitle.isNotEmpty) ...[
-                          const SizedBox(height: 2),
+                          SizedBox(height: 2.h),
                           Text(
                             row.subtitle,
-                            style: TextStyle(color: AppColors.textSecondary),
+                            style: AppTypography.caption,
                           ),
                         ],
                       ],
@@ -387,11 +385,13 @@ class _ClassroomCard extends StatelessWidget {
           ),
           if (expanded)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              padding: EdgeInsets.fromLTRB(AppDimensions.spacing16, 0, AppDimensions.spacing16, AppDimensions.spacing16),
               child: row.isEmpty
                   ? Text(
                       'quizzes.none_in_classroom'.tr(),
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     )
                   : Column(
                       children: [
@@ -427,37 +427,34 @@ class _AssignmentRow extends StatelessWidget {
 
     return InkWell(
       onTap: openable ? () => onOpen(row) : null,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusInput),
       child: Container(
-        margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.all(12),
+        margin: EdgeInsets.only(top: AppDimensions.spacing8),
+        padding: EdgeInsets.all(AppDimensions.spacing12),
         decoration: BoxDecoration(
           color: AppColors.bg,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusInput),
         ),
         child: Row(
           children: [
-            Icon(_icon(assignment.type), size: 20),
-            const SizedBox(width: 10),
+            Icon(_icon(assignment.type), size: 20.r),
+            SizedBox(width: AppDimensions.spacing8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     assignment.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: AppTypography.bodyStrong,
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2.h),
                   Text(
                     due == null
                         ? 'quizzes.no_due'.tr()
                         : 'quizzes.due'.tr(
                             args: [DateFormat.yMMMd().format(due)],
                           ),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: AppTypography.tiny,
                   ),
                 ],
               ),
@@ -467,11 +464,11 @@ class _AssignmentRow extends StatelessWidget {
                 'quizzes.questions'.tr(
                   args: ['${assignment.questions.length}'],
                 ),
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: AppTypography.tiny,
               ),
             if (openable) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, size: 18),
+              SizedBox(width: AppDimensions.spacing4),
+              Icon(Icons.chevron_right, size: 18.r),
             ],
           ],
         ),
