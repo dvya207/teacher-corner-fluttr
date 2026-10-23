@@ -1,16 +1,32 @@
-# Teacher Corner: intern rebuild starter
+# Teacher Corner Flutter App
 
-You are going to build a working slice of the ThinkTac Teacher Corner Android
-app, from scratch, in Flutter. This repo is the boilerplate you do **not** need
-to write: the design system, the shared widget library, the theme, the router
-skeleton, and the i18n scaffold. Everything that makes the app actually *do*
-something, you write yourself.
+![Flutter](https://img.shields.io/badge/Flutter-3.11%2B-02569B?logo=flutter)
+![Dart](https://img.shields.io/badge/Dart-3.11%2B-0175C2?logo=dart)
+![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)
+![CI](https://github.com/dvya207/teacher-corner-fluttr/actions/workflows/release.yml/badge.svg)
 
-What is deliberately **not** here: no services, no providers, no data models,
-no feature screens, no authentication. Those are the exercise.
+A Flutter-based Teacher Corner app built for the teaching workflow, classroom access,
+learning-unit delivery, evidence submission, and assessment review. This project is
+structured as a production-ready starter and uses Firebase-backed data access with
+localized UI and a reusable component-driven architecture.
 
-Read `PLAN.md` for the phase-by-phase brief and `SCHEMA.md` for the Firestore
-shapes. Start here for setup.
+This repository contains the app implementation, localization resources,
+feature screens, and supporting tooling for the Teacher Corner experience.
+It is designed to support classroom rollouts, teacher onboarding, and a guided
+learning journey within the app.
+
+## Release workflow
+
+Use release branches for stabilizing and shipping changes before merging to `main`:
+
+```bash
+git checkout -b release/v1.0.0
+git push -u origin release/v1.0.0
+```
+
+The GitHub Actions workflow in `.github/workflows/release.yml` validates the app on
+release branches and pull requests by running dependency installation, formatting,
+analysis, and tests.
 
 ---
 
