@@ -22,9 +22,9 @@ learning content, evidence, and reporting.
 
 ## App screenshots
 
-![Teacher Corner login screen](screenshots/WhatsApp%20Image%202026-10-23%20at%202.07.32%20PM.jpeg)
-![Teacher Corner app screen](screenshots/WhatsApp%20Image%202026-10-23%20at%202.07.39%20PM.jpeg)
-![Teacher Corner submissions screen](screenshots/WhatsApp%20Image%202026-10-23%20at%202.07.42%20PM.jpeg)
+![Teacher Corner login screen](screenshots/01-login-screen.jpeg)
+![Teacher Corner dashboard screen](screenshots/02-dashboard-screen.jpeg)
+![Teacher Corner submissions screen](screenshots/03-submissions-screen.jpeg)
 
 
 ## Getting started
