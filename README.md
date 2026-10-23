@@ -1,9 +1,11 @@
 # Teacher Corner Flutter App
 
-![Flutter](https://img.shields.io/badge/Flutter-3.11%2B-02569B?logo=flutter)
-![Dart](https://img.shields.io/badge/Dart-3.11%2B-0175C2?logo=dart)
-![Android](https://img.shields.io/badge/Android-ready-3DDC84?logo=android)
-![CI](https://github.com/dvya207/teacher-corner-fluttr/actions/workflows/release.yml/badge.svg)
+<p align="center">
+  <img src="https://img.shields.io/badge/Flutter-3.11%2B-02569B?logo=flutter" alt="Flutter" />
+  <img src="https://img.shields.io/badge/Dart-3.11%2B-0175C2?logo=dart" alt="Dart" />
+  <img src="https://img.shields.io/badge/Android-ready-3DDC84?logo=android" alt="Android" />
+  <img src="https://github.com/dvya207/teacher-corner-fluttr/actions/workflows/release.yml/badge.svg" alt="CI" />
+</p>
 
 Developed by Divya Jain.
 
